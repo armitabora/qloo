@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VibeGuide — Scope</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --card: #0f3460;
+    --accent: #e94560;
+    --accent-soft: #e9456033;
+    --text: #eee;
+    --text-muted: #a0a0b8;
+    --border: #2a2a4a;
+    --success: #4ecca3;
+    --later: #f0a500;
+    --cut: #e94560;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    padding: 2rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    background: linear-gradient(135deg, var(--accent), #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+  }
+  h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 2rem 0 0.8rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  p, li { color: var(--text); font-size: 0.95rem; }
+  .kernel-box {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 1.2rem 1.5rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0 1.5rem;
+    font-size: 1rem;
+  }
+  .kernel-box em { color: #ff9a9e; font-style: italic; }
+
+  /* Flow diagram */
+  .flow-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+  .flow-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .flow-step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    text-align: center;
+    min-width: 140px;
+    max-width: 180px;
+  }
+  .flow-step .icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
+  .flow-step .label { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+  .flow-step .detail { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem; }
+  .flow-arrow {
+    font-size: 1.4rem;
+    color: var(--accent);
+    padding: 0 0.5rem;
+    flex-shrink: 0;
+  }
+
+  /* Itinerary stops */
+  .stops {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .stop {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    text-align: center;
+  }
+  .stop .time-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+  .stop .time-label { font-size: 0.85rem; font-weight: 600; color: var(--success); }
+  .stop .stop-type { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+  /* Reveal sections */
+  details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 0.6rem 0;
+    overflow: hidden;
+  }
+  summary {
+    padding: 0.9rem 1.2rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    user-select: none;
+  }
+  summary:hover { background: var(--card); }
+  details[open] summary { border-bottom: 1px solid var(--border); }
+  .reveal-body {
+    padding: 1rem 1.2rem;
+  }
+  .reveal-body ul {
+    list-style: none;
+    padding: 0;
+  }
+  .reveal-body li {
+    padding: 0.4rem 0;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .reveal-body li:last-child { border-bottom: none; }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  .badge-now { background: var(--success); color: #111; }
+  .badge-later { background: var(--later); color: #111; }
+  .badge-cut { background: var(--cut); color: #fff; }
+
+  /* Demo timeline */
+  .demo-timeline {
+    position: relative;
+    padding-left: 2rem;
+    margin: 1rem 0;
+  }
+  .demo-timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent);
+  }
+  .demo-beat {
+    position: relative;
+    padding: 0.6rem 0 0.6rem 1rem;
+  }
+  .demo-beat::before {
+    content: '';
+    position: absolute;
+    left: -1.55rem;
+    top: 0.95rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .demo-beat .timestamp {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: monospace;
+  }
+  .demo-beat .action {
+    font-size: 0.88rem;
+    color: var(--text);
+    margin-top: 0.15rem;
+  }
+
+  .status-badge {
+    display: inline-block;
+    background: var(--success);
+    color: #111;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.7rem;
+    border-radius: 20px;
+    margin-left: 0.8rem;
+    vertical-align: middle;
+  }
+
+  .footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<h1>VibeGuide <span class="status-badge">Scope Approved</span></h1>
+<p class="subtitle">A taste-intelligent travel concierge: enter a city and a few cultural anchors you love, get a curated 1-day itinerary where every stop comes with a personalized explanation of <em>why</em> it fits your vibe.</p>
+
+<h2>🔥 The Unique Kernel</h2>
+<div class="kernel-box">
+  The cross-domain <strong>"Why It Fits Your Vibe"</strong> explanation. Qloo provides the taste intelligence; an LLM synthesizes it into a story: <em>"Because you love Studio Ghibli and lo-fi hip hop, you'll appreciate the hand-painted signage, warm wood interior, and quiet back-alley location of this kissaten."</em> The magic isn't the recommendation — it's the narrative bridge.
+</div>
+
+<h2>🔄 Architecture Flow</h2>
+<div class="flow-diagram">
+  <noscript><p><strong>User</strong> → cultural anchors → <strong>FastAPI</strong> → <strong>Qloo API</strong> (taste data) → <strong>LLM</strong> (Gemini/Groq) → vibe narratives → <strong>React UI</strong> → itinerary</p></noscript>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="icon">🧑‍💻</div>
+      <div class="label">Traveler</div>
+      <div class="detail">City + 2–3 cultural anchors</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">⚡</div>
+      <div class="label">FastAPI</div>
+      <div class="detail">Orchestrator backend</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">🧠</div>
+      <div class="label">Qloo API</div>
+      <div class="detail">Taste intelligence &amp; matching</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">✨</div>
+      <div class="label">LLM</div>
+      <div class="detail">Gemini / Groq narrative gen</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">📱</div>
+      <div class="label">React UI</div>
+      <div class="detail">Itinerary + vibe badges</div>
+    </div>
+  </div>
+</div>
+
+<h2>👤 Who It's For</h2>
+<p>An independent, culturally curious traveler (early 20s–30s) arriving in an unfamiliar major city. Tired of generic "Top 10" tourist lists that are completely blind to personal taste. Wants a personalized cheat sheet that <em>gets</em> them.</p>
+
+<h2>🗓️ The 1-Day Itinerary</h2>
+<div class="stops">
+  <div class="stop">
+    <div class="time-icon">☕</div>
+    <div class="time-label">Morning</div>
+    <div class="stop-type">Café</div>
+  </div>
+  <div class="stop">
+    <div class="time-icon">🎨</div>
+    <div class="time-label">Afternoon</div>
+    <div class="stop-type">Gallery · Bookstore · Record Shop</div>
+  </div>
+  <div class="stop">
+    <div class="time-icon">🍜</div>
+    <div class="time-label">Evening</div>
+    <div class="stop-type">Dining</div>
+  </div>
+  <div class="stop">
+    <div class="time-icon">🌙</div>
+    <div class="time-label">Night</div>
+    <div class="stop-type">Venue · Hangout</div>
+  </div>
+</div>
+
+<h2>🎬 60-Second Demo Flow</h2>
+<div class="demo-timeline">
+  <div class="demo-beat">
+    <div class="timestamp">0:00 – 0:10</div>
+    <div class="action"><strong>The Input:</strong> Share screen — clean localhost app. Select "Tokyo", type "Studio Ghibli" + "Lo-fi Hip Hop".</div>
+  </div>
+  <div class="demo-beat">
+    <div class="timestamp">0:10 – 0:20</div>
+    <div class="action"><strong>The Processing:</strong> Click "Generate My Day." Sleek loading state (spinner / skeleton) while Qloo + LLM work.</div>
+  </div>
+  <div class="demo-beat">
+    <div class="timestamp">0:20 – 0:50</div>
+    <div class="action"><strong>The Reveal:</strong> Itinerary loads — 4 stops. Scroll through, pause on a "Why It Fits Your Vibe" paragraph.</div>
+  </div>
+  <div class="demo-beat">
+    <div class="timestamp">0:50 – 1:00</div>
+    <div class="action"><strong>The Proof:</strong> Switch to VS Code terminal — show logs proving Qloo API + LLM were actually invoked.</div>
+  </div>
+</div>
+
+<h2>📦 Scope Boundaries</h2>
+
+<details open>
+  <summary>🟢 What We're Building (Now)</summary>
+  <div class="reveal-body">
+    <ul>
+      <li><span class="badge badge-now">now</span> Single-page app: one screen, one flow</li>
+      <li><span class="badge badge-now">now</span> 2 cities (Tokyo, New York) — dropdown selector</li>
+      <li><span class="badge badge-now">now</span> 2–3 cultural anchor inputs (music, film, vibe tag)</li>
+      <li><span class="badge badge-now">now</span> "Generate My Day" button</li>
+      <li><span class="badge badge-now">now</span> 4-stop 1-day itinerary (Morning → Night)</li>
+      <li><span class="badge badge-now">now</span> "Why It Fits Your Vibe" LLM narrative per stop</li>
+      <li><span class="badge badge-now">now</span> Graceful loading state during processing</li>
+      <li><span class="badge badge-now">now</span> FastAPI → Qloo API → LLM → React pipeline</li>
+      <li><span class="badge badge-now">now</span> Localhost deployment, clean README</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>🟡 Later (Worth Doing, Not Now)</summary>
+  <div class="reveal-body">
+    <ul>
+      <li><span class="badge badge-later">later</span> More cities (London, Paris, etc.)</li>
+      <li><span class="badge badge-later">later</span> Thumbs-up/down feedback to refine results</li>
+      <li><span class="badge badge-later">later</span> Shareable itinerary cards</li>
+      <li><span class="badge badge-later">later</span> "Surprise Me" mode — vibe + budget → city suggestion</li>
+      <li><span class="badge badge-later">later</span> User accounts and saved itineraries</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>🔴 Explicitly Cut</summary>
+  <div class="reveal-body">
+    <ul>
+      <li><span class="badge badge-cut">cut</span> <strong>User auth / accounts</strong> — unnecessary friction for taste-in, itinerary-out PoC</li>
+      <li><span class="badge badge-cut">cut</span> <strong>Database</strong> — no persistence; every generation is stateless</li>
+      <li><span class="badge badge-cut">cut</span> <strong>Booking integrations</strong> — not a travel agent, it's a taste concierge</li>
+      <li><span class="badge badge-cut">cut</span> <strong>Mobile app</strong> — web on localhost for the demo</li>
+      <li><span class="badge badge-cut">cut</span> <strong>More than 2 cities</strong> — depth over breadth</li>
+      <li><span class="badge badge-cut">cut</span> <strong>Group trips</strong> — one person, one vibe, one day</li>
+    </ul>
+  </div>
+</details>
+
+<div class="footer">
+  VibeGuide · Scope Document · Approved · Canonical source: devpost/scope.md
+</div>
+
+</body>
+</html>
