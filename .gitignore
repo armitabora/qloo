@@ -1,11 +1,17 @@
+# Virtual Environment & Python
 venv/
 __pycache__/
 *.pyc
-.env
-.env.*
-!.env.example
-node_modules/
-.DS_Store
 
-# Keep personal learning context out of commits
-/devpost/learner-profile.md
+# Node / React
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Environment Variables & Secrets
+.env
+backend/.env
+*.env
+
+# Mac OS
+.DS_Store
