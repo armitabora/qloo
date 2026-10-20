@@ -54,13 +54,17 @@ class AnchorResolver:
         return await self._resolve_entity(text, kind="music", types=self.MUSIC_TYPES)
 
     async def resolve_film(self, text: str) -> AnchorResolution:
-        # Try movie → person → brand in one multi-type search first.
-        try:
-            hits = await self.client.search(text, types=self.FILM_TYPES, take=6)
-        except QlooError as exc:
-            logger.warning("film search failed for %r: %s", text, exc)
-            hits = []
-        best = self._pick_best(hits, preferred_types=self.FILM_TYPES)
+        # Prefer brand for studio names, then movie / person.
+        ordered_types = ["urn:entity:brand", "urn:entity:movie", "urn:entity:person"]
+        hits: list[dict[str, Any]] = []
+        for t in ordered_types:
+            try:
+                batch = await self.client.search(text, types=t, take=5)
+            except QlooError as exc:
+                logger.warning("film search failed for %r type=%s: %s", text, t, exc)
+                batch = []
+            hits.extend(batch)
+        best = self._pick_best(hits, preferred_types=ordered_types, query=text)
         if best:
             return AnchorResolution(
                 input=text,
@@ -117,7 +121,7 @@ class AnchorResolver:
             logger.warning("%s search failed for %r: %s", kind, text, exc)
             hits = []
         preferred = types if isinstance(types, list) else [types]
-        best = self._pick_best(hits, preferred_types=preferred)
+        best = self._pick_best(hits, preferred_types=preferred, query=text)
         if best:
             return AnchorResolution(
                 input=text,
@@ -130,21 +134,50 @@ class AnchorResolver:
         return AnchorResolution(input=text, kind=kind, resolved=False)  # type: ignore[arg-type]
 
     @staticmethod
+    def _name_score(query: str, name: str) -> float:
+        q = query.strip().lower()
+        n = (name or "").strip().lower()
+        if not q or not n:
+            return 0.0
+        if q == n:
+            return 100.0
+        if n.startswith(q) or q.startswith(n):
+            return 80.0
+        if q in n:
+            # Penalize long noisy names that merely contain the query
+            # (e.g. "Picsart Photo Studio" for "Studio Ghibli").
+            return 40.0 - min(20.0, abs(len(n) - len(q)) * 0.5)
+        q_tokens = set(q.split())
+        n_tokens = set(n.split())
+        if not q_tokens:
+            return 0.0
+        overlap = len(q_tokens & n_tokens) / len(q_tokens)
+        return overlap * 30.0
+
+    @classmethod
     def _pick_best(
-        hits: list[dict[str, Any]], preferred_types: list[str]
+        cls,
+        hits: list[dict[str, Any]],
+        preferred_types: list[str],
+        query: str = "",
     ) -> Optional[dict[str, Any]]:
         if not hits:
             return None
-        # Prefer exact-ish name + preferred type order.
+
         def rank(entity: dict[str, Any]) -> tuple:
             et = _entity_type(entity) or ""
             try:
                 type_rank = preferred_types.index(et)
             except ValueError:
                 type_rank = 99
-            return (type_rank, 0 if _entity_id(entity) else 1)
+            name_score = cls._name_score(query, _entity_name(entity))
+            # Require a minimum name match so irrelevant hits lose.
+            return (-name_score, type_rank, 0 if _entity_id(entity) else 1)
 
-        return sorted(hits, key=rank)[0]
+        best = sorted(hits, key=rank)[0]
+        if query and cls._name_score(query, _entity_name(best)) < 25.0:
+            return None
+        return best
 
     @staticmethod
     def signal_entity_ids(resolutions: list[AnchorResolution]) -> list[str]:

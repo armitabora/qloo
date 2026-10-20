@@ -85,7 +85,7 @@ def get_settings() -> Settings:
         gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip(),
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip() or "gemini-2.0-flash",
         allowed_origins=_parse_origins(os.getenv("ALLOWED_ORIGINS")),
-        qloo_timeout_seconds=float(os.getenv("QLOO_TIMEOUT_SECONDS", "8")),
+        qloo_timeout_seconds=float(os.getenv("QLOO_TIMEOUT_SECONDS", "12")),
         qloo_max_retries=int(os.getenv("QLOO_MAX_RETRIES", "2")),
         qloo_cache_ttl_seconds=float(os.getenv("QLOO_CACHE_TTL_SECONDS", "300")),
         agent_max_steps=int(os.getenv("AGENT_MAX_STEPS", "4")),

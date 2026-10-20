@@ -53,7 +53,10 @@ async def test_full_pipeline_template_narratives(settings: Settings):
     respx.get(f"{BASE}/search").mock(
         side_effect=[
             httpx.Response(200, json=search_artist()),
+            # film resolver: brand -> movie -> person
             httpx.Response(200, json=search_film()),
+            httpx.Response(200, json={"results": []}),
+            httpx.Response(200, json={"results": []}),
         ]
     )
 

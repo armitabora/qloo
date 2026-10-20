@@ -35,10 +35,13 @@ def _mock_tag_discovery(respx_mock):
 @pytest.mark.asyncio
 @respx.mock
 async def test_resolve_music_and_film(settings: Settings):
+    # Film resolver searches brand, then movie, then person.
     respx.get(f"{BASE}/search").mock(
         side_effect=[
             httpx.Response(200, json=search_artist()),
             httpx.Response(200, json=search_film()),
+            httpx.Response(200, json={"results": []}),
+            httpx.Response(200, json={"results": []}),
         ]
     )
     async with QlooClient(settings=settings) as client:
@@ -47,6 +50,7 @@ async def test_resolve_music_and_film(settings: Settings):
     assert len(results) == 2
     assert results[0].resolved and results[0].entity_id == "ent-artist-1"
     assert results[1].resolved and results[1].kind == "film"
+    assert results[1].matched_name == "Studio Ghibli"
     assert AnchorResolver.signal_entity_ids(results) == ["ent-artist-1", "ent-brand-1"]
 
 

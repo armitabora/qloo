@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Live discovery probe against the Qloo hackathon API.
 
 Verifies:
@@ -114,7 +114,17 @@ async def probe_city(
     report: dict[str, Any] = {"city": city_key, "location_query": city.location_query, "phases": {}}
 
     for phase in PHASES:
-        tag_ids = [t["id"] for t in category_tags.get(phase, [])][:4]
+        # Prefer category:place / genre:place tags only (skip hotel/amenity noise).
+        raw_ids = [t["id"] for t in category_tags.get(phase, [])]
+        tag_ids = [
+            tid
+            for tid in raw_ids
+            if tid.startswith("urn:tag:category:place:")
+            or (
+                tid.startswith("urn:tag:genre:place:")
+                and ":hotel:" not in tid
+            )
+        ][:4]
         params: dict[str, Any] = {
             "filter.type": "urn:entity:place",
             "filter.location.query": city.location_query,
@@ -164,7 +174,7 @@ async def probe_city(
         }
         print(f"\n[{city_key}/{phase}] results={len(entities)} keyword_hits={hit}")
         for s in summary[:3]:
-            print(f"  • {s['name']}  tags={s['tags'][:4]}  affinity={s['affinity']}")
+            print(f"  - {s['name']}  tags={s['tags'][:4]}  affinity={s['affinity']}")
 
     return report
 
@@ -177,12 +187,29 @@ async def resolve_demo_anchors(client: QlooClient) -> list[str]:
         ("Studio Ghibli", ["urn:entity:brand", "urn:entity:movie", "urn:entity:person"]),
     ):
         results = await client.search(query, types=types, take=5)
-        print(f"\n[search] '{query}' → {len(results)} hits")
-        for r in results[:3]:
+        print(f"\n[search] '{query}' -> {len(results)} hits")
+        # Prefer name-overlapping hits (avoid "Picsart Photo Studio" for Studio Ghibli).
+        ranked = sorted(
+            results,
+            key=lambda r: (
+                0 if query.lower() == _entity_name(r).lower() else 1,
+                0 if query.lower() in _entity_name(r).lower() and len(_entity_name(r)) < len(query) + 12 else 1,
+                len(_entity_name(r)),
+            ),
+        )
+        for r in ranked[:3]:
             eid = _entity_id(r)
             print(f"  - {_entity_name(r)}  id={eid}  type={r.get('type') or r.get('entity_type')}")
-            if eid and eid not in ids:
-                ids.append(eid)
+        for r in ranked:
+            eid = _entity_id(r)
+            name = _entity_name(r).lower()
+            if not eid:
+                continue
+            if query.lower() == name or (
+                all(tok in name for tok in query.lower().split()) and len(name) <= len(query) + 16
+            ):
+                if eid not in ids:
+                    ids.append(eid)
                 break
     return ids
 
@@ -201,7 +228,7 @@ async def main(cities: list[str]) -> int:
         # Sanity: search
         try:
             hits = await client.search("Radiohead", types="urn:entity:artist", take=3)
-            print(f"\n[sanity] /search Radiohead → {len(hits)} results")
+            print(f"\n[sanity] /search Radiohead -> {len(hits)} results")
         except QlooError as exc:
             print(f"ERROR: /search failed: {exc}")
             return 1
@@ -229,7 +256,7 @@ async def main(cities: list[str]) -> int:
                 elif data.get("category_keyword_hits", 0) == 0:
                     print(
                         f"WARN {report['city']}/{phase}: results present but no keyword overlap "
-                        f"(tags may still be valid — inspect sample)"
+                        f"(tags may still be valid - inspect sample)"
                     )
                 else:
                     print(f"OK   {report['city']}/{phase}: {data['result_count']} places, hits={data['category_keyword_hits']}")
@@ -238,12 +265,29 @@ async def main(cities: list[str]) -> int:
         out_dir = Path(__file__).resolve().parent / "captures"
         out_dir.mkdir(exist_ok=True)
         summary_path = out_dir / "probe_summary.json"
+        # Keep only high-signal category/genre place tags (mirrors CategoryResolver scoring).
+        def _prefer(tag_id: str) -> bool:
+            tid = tag_id.lower()
+            if any(x in tid for x in (":hotel:", "amenity:", "nearby_attraction:", "setting:qloo:", "decor:", "wikidata:")):
+                return False
+            return tid.startswith("urn:tag:category:place:") or tid.startswith("urn:tag:genre:place:")
+
         category_override = {
-            "strict": {phase: [t["id"] for t in tags] for phase, tags in category_tags.items()},
+            "strict": {
+                phase: [t["id"] for t in tags if _prefer(t["id"])][:4]
+                for phase, tags in category_tags.items()
+            },
             "broad": {},
         }
         (out_dir / "category_tags.json").write_text(
             json.dumps(category_override, indent=2), encoding="utf-8"
+        )
+        (out_dir / "category_tags.raw.json").write_text(
+            json.dumps(
+                {phase: [t["id"] for t in tags] for phase, tags in category_tags.items()},
+                indent=2,
+            ),
+            encoding="utf-8",
         )
         redacted = {
             "cities": [
@@ -267,8 +311,8 @@ async def main(cities: list[str]) -> int:
             "signal_entity_count": len(signal_ids),
         }
         summary_path.write_text(json.dumps(redacted, indent=2), encoding="utf-8")
-        print(f"\nWrote redacted summary → {summary_path}")
-        print(f"Wrote category override → {out_dir / 'category_tags.json'}")
+        print(f"\nWrote redacted summary -> {summary_path}")
+        print(f"Wrote category override -> {out_dir / 'category_tags.json'}")
         return 0 if ok else 1
 
 
@@ -282,3 +326,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     raise SystemExit(asyncio.run(main(args.cities)))
+
