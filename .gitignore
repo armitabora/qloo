@@ -16,7 +16,8 @@ backend/.env
 !backend/.env.example
 
 # Live Qloo capture artifacts (must not be public — Qloo ToS)
-backend/scripts/captures/
+backend/scripts/captures/*
+!backend/scripts/captures/.gitkeep
 backend/tests/fixtures/live/
 
 # Mac OS
