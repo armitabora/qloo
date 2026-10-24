@@ -12,6 +12,15 @@ frontend/dist/
 .env
 backend/.env
 *.env
+!.env.example
+!backend/.env.example
+
+# Live Qloo capture artifacts (must not be public — Qloo ToS)
+backend/scripts/captures/*
+!backend/scripts/captures/.gitkeep
+backend/tests/fixtures/live/
 
 # Mac OS
 .DS_Store
+.pytest_cache/
+*.egg-info/
