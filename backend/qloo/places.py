@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -13,6 +14,24 @@ from qloo.client import QlooClient, QlooError
 from qloo.resolver import AnchorResolver
 
 logger = logging.getLogger("vibe.qloo.places")
+
+# Junk patterns found in live Qloo responses (age ranges, payments, amenities)
+_TAG_JUNK = re.compile(
+    r"^\d[\d\s\-]+$"  # pure numbers / age ranges: "25 29", "30 34"
+    r"|nfc|mobile payment|credit card"  # payment methods
+    r"|mastercard|visa|amex"
+    r"|restroom|wheelchair|accessible"
+    r"|air condition|flat screen|towel"
+    r"|front desk|check.?in|check.?out"
+    r"|parking\b|wifi\b|wi-fi"
+    r"|delivery\b|drive.?thru"  # purely operational
+    r"|^place$",  # too generic to be useful
+    re.IGNORECASE,
+)
+
+
+def _is_useful_tag(name: str) -> bool:
+    return bool(name) and len(name) >= 3 and not _TAG_JUNK.search(name)
 
 
 @dataclass
@@ -104,7 +123,7 @@ def _tag_names(entity: dict[str, Any], limit: int = 4) -> list[str]:
             name = t.get("name") or t.get("id")
         else:
             name = str(t)
-        if name:
+        if name and _is_useful_tag(str(name)):
             names.append(str(name))
         if len(names) >= limit:
             break
@@ -112,9 +131,13 @@ def _tag_names(entity: dict[str, Any], limit: int = 4) -> list[str]:
 
 
 def _category_label(entity: dict[str, Any], fallback: str = "Place") -> str:
-    tags = _tag_names(entity, limit=1)
-    if tags:
-        return tags[0]
+    for t in entity.get("tags") or []:
+        if isinstance(t, dict):
+            name = t.get("name") or t.get("id")
+        else:
+            name = str(t)
+        if name and _is_useful_tag(str(name)):
+            return str(name)
     props = entity.get("properties") or {}
     if isinstance(props, dict) and props.get("business_type"):
         return str(props["business_type"])
