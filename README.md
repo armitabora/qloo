@@ -2,7 +2,7 @@
 
 **Taste-intelligent travel concierge powered by Qloo's cultural AI.**
 
-Generic travel guides give everyone the same "Top 10" list. VibeGuide uses Qloo to understand your cultural taste — what you listen to, where you eat, what you watch — and builds city itineraries that actually feel like *you*.
+Generic travel guides give everyone the same "Top 10" list. VibeGuide uses Qloo to understand your cultural taste: what you listen to, where you eat, what you watch, and builds city itineraries that actually feel like *you*.
 
 > Built for the [Qloo Agentic Hackathon](https://devpost.com/) · Deadline Oct 30, 2026
 
@@ -10,10 +10,10 @@ Generic travel guides give everyone the same "Top 10" list. VibeGuide uses Qloo 
 
 ## What It Does
 
-1. **Taste Onboarding** — pick a handful of artists, cuisines, or vibes you love.
-2. **Itinerary Generation** — VibeGuide calls Qloo's Taste API across multiple entity types (restaurants, music venues, bars, attractions) and assembles a day-by-day plan for any city.
-3. **"Why It Fits Your Vibe"** — every stop gets a short narrative explaining the taste connection, written by Gemini (with a template fallback).
-4. **Real-Time Refine** — thumbs-up / thumbs-down a suggestion; the Gemini agent re-ranks remaining stops against your feedback.
+1. **Taste Onboarding**: pick a handful of artists, cuisines, or vibes you love.
+2. **Itinerary Generation**: VibeGuide calls Qloo's Taste API across multiple entity types (restaurants, music venues, bars, attractions) and assembles a day-by-day plan for any city.
+3. **"Why It Fits Your Vibe"**: every stop gets a short narrative explaining the taste connection, written by Gemini (with a template fallback).
+4. **Real-Time Refine**: thumbs-up / thumbs-down a suggestion; the Gemini agent re-ranks remaining stops against your feedback.
 
 ---
 
@@ -32,9 +32,9 @@ Generic travel guides give everyone the same "Top 10" list. VibeGuide uses Qloo 
 
 VibeGuide uses Qloo at three points in the pipeline:
 
-1. **Category resolution** — maps user seed preferences to Qloo entity types and fetches matching taste tags.
-2. **Cross-category insights** — `/v2/insights` with `filter.type` + `signal.interests.entities` translates music/film taste into dining/nightlife recommendations.
-3. **Location-scoped search** — `/v2/search` with geo filter ensures every recommendation is a real, visitable place in the destination city.
+1. **Category resolution**: maps user seed preferences to Qloo entity types and fetches matching taste tags.
+2. **Cross-category insights**: `/v2/insights` with `filter.type` + `signal.interests.entities` translates music/film taste into dining/nightlife recommendations.
+3. **Location-scoped search**: `/v2/search` with geo filter ensures every recommendation is a real, visitable place in the destination city.
 
 Each itinerary stop exposes `influenced_by`, `affinity`, and `source` so the taste connection is always explainable.
 
@@ -47,7 +47,7 @@ Each itinerary stop exposes `influenced_by`, `affinity`, and `source` so the tas
 - Python 3.13+
 - Node 18+
 - A [Qloo API key](https://www.qloo.com/)
-- A [Google Gemini API key](https://aistudio.google.com/) *(optional — template fallback works without it)*
+- A [Google Gemini API key](https://aistudio.google.com/) *(optional; template fallback works without it)*
 
 ### Backend
 
@@ -110,11 +110,11 @@ See [`backend/README.md`](backend/README.md) for full request/response schemas.
 
 ## Team
 
-- **Armita Bora** — frontend & product
-- **Chinmoy Jyoti Bora** — backend & Qloo pipeline
+- **Armita Bora**: frontend & product
+- **Chinmoy Jyoti Bora**: backend & Qloo pipeline
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).

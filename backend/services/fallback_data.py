@@ -14,9 +14,9 @@ FALLBACK_ITINERARIES = {
             "category": "Historic Vinyl Listening Cafe",
             "vibe_narrative": (
                 "Because you gravitate toward lo-fi atmospheres and cinematic "
-                "stillness, Lion's cathedral-like wooden interior — dim lighting, "
+                "stillness, Lion's cathedral-like wooden interior: dim lighting, "
                 "vintage speakers stacked floor to ceiling, and a strict no-talking "
-                "policy — feels like stepping into a Studio Ghibli scene where time "
+                "policy. It feels like stepping into a Studio Ghibli scene where time "
                 "slows down and every record played is chosen with reverence."
             ),
         },
@@ -27,8 +27,8 @@ FALLBACK_ITINERARIES = {
             "vibe_narrative": (
                 "Tucked on the second floor of a Shimokitazawa side street, Flash "
                 "Disc Ranch mirrors the deep-crate ethos behind your favorite music. "
-                "The owner curates rare Japanese city pop, ambient, and shoegaze vinyl "
-                "— genres that share DNA with lo-fi production and the dreamy aesthetics "
+                "The owner curates rare Japanese city pop, ambient, and shoegaze vinyl, "
+                "genres that share DNA with lo-fi production and the dreamy aesthetics "
                 "of the films you love."
             ),
         },
@@ -37,8 +37,8 @@ FALLBACK_ITINERARIES = {
             "venue": "Afuri Ramen",
             "category": "Minimalist Yuzu Ramen Bar",
             "vibe_narrative": (
-                "Afuri strips ramen down to its essence — a translucent yuzu-salt "
-                "broth, clean design, and open kitchen — matching the restraint and "
+                "Afuri strips ramen down to its essence: a translucent yuzu-salt "
+                "broth, clean design, and open kitchen, matching the restraint and "
                 "intentionality you appreciate in both music production and film "
                 "direction. It's the culinary equivalent of a well-mixed lo-fi track: "
                 "nothing wasted, everything in its place."
@@ -52,7 +52,7 @@ FALLBACK_ITINERARIES = {
                 "Down a narrow Golden Gai alley, Bar Martha seats eight people around "
                 "a candlelit counter while the bartender spins jazz and soul vinyl. "
                 "The intimacy and analog warmth echo your taste for lo-fi textures and "
-                "the moody, back-alley cinematography of Wong Kar-wai — a place that "
+                "the moody, back-alley cinematography of Wong Kar-wai. It's a place that "
                 "feels like a secret meant just for you."
             ),
         },
@@ -63,9 +63,9 @@ FALLBACK_ITINERARIES = {
             "venue": "Devoción",
             "category": "Colombian Craft Coffee & Gallery",
             "vibe_narrative": (
-                "Devoción's Williamsburg greenhouse — raw brick walls draped in "
+                "Devoción's Williamsburg greenhouse: raw brick walls draped in "
                 "living plants, skylights flooding the room with natural light, and "
-                "single-origin beans roasted on-site — matches the organic warmth and "
+                "single-origin beans roasted on-site. It matches the organic warmth and "
                 "artistic intentionality you value. It's a morning ritual that feels "
                 "curated, not commercial."
             ),
@@ -76,7 +76,7 @@ FALLBACK_ITINERARIES = {
             "category": "Indie Record Store & Performance Space",
             "vibe_narrative": (
                 "Rough Trade bridges the gap between your music taste and physical "
-                "exploration — a sprawling Rockefeller Center outpost stocking vinyl, "
+                "exploration: a sprawling Rockefeller Center outpost stocking vinyl, "
                 "hosting in-store performances, and curating staff picks that lean "
                 "toward the indie, experimental, and lo-fi scenes you're drawn to."
             ),
@@ -86,7 +86,7 @@ FALLBACK_ITINERARIES = {
             "venue": "Xi'an Famous Foods",
             "category": "Hand-Pulled Noodle Counter",
             "vibe_narrative": (
-                "No reservations, no pretense — just fiery cumin lamb noodles pulled "
+                "No reservations, no pretense. Just fiery cumin lamb noodles pulled "
                 "to order at a tight counter. Xi'an Famous Foods carries the same "
                 "unpretentious authenticity as the underground music scenes and raw "
                 "filmmaking you admire: substance over spectacle, flavor over flash."
@@ -98,7 +98,7 @@ FALLBACK_ITINERARIES = {
             "category": "Indoor-Outdoor DJ Venue & Garden",
             "vibe_narrative": (
                 "Ridgewood's Nowadays balances an eclectic DJ lineup with an expansive "
-                "outdoor garden lit by string lights — bridging your love of curated "
+                "outdoor garden lit by string lights, bridging your love of curated "
                 "sonic experiences with the atmospheric, almost filmic quality of a "
                 "space that feels both intentional and free. It's where lo-fi meets "
                 "real life."
