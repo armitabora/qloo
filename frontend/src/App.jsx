@@ -180,7 +180,7 @@ function App() {
                   <div className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{stop.phase}</div>
                   <div className="text-xl font-medium text-white mb-3">{stop.venue}</div>
                   <blockquote className="bg-[#1e1e1e] border-l-2 border-gray-500 p-4 rounded-r-lg text-sm text-gray-300 italic">
-                    ✨ {stop.vibe_narrative}
+                    {stop.vibe_narrative}
                   </blockquote>
                 </div>
               ))}
