@@ -2,32 +2,93 @@
 
 from __future__ import annotations
 
+import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 
 # Load backend/.env then repo-root .env (later files do not override).
 _BACKEND_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _BACKEND_DIR.parent
+_CITIES_PATH = _BACKEND_DIR / "data" / "cities.json"
 load_dotenv(_BACKEND_DIR / ".env")
 load_dotenv(_REPO_ROOT / ".env")
+
+REGION_LABELS: dict[str, str] = {
+    "us": "United States",
+    "europe": "Europe",
+    "asia": "Asia",
+    "india": "India",
+    "oceania": "Oceania",
+}
+
+VALID_REGIONS = frozenset(REGION_LABELS.keys())
 
 
 @dataclass(frozen=True)
 class CityConfig:
-    """How we address a destination in Qloo location filters."""
+    """How we address a destination in Qloo location filters and the UI."""
 
     name: str
     location_query: str
+    region: str
+    country: str
+    lat: float
+    lng: float
+    aliases: tuple[str, ...] = ()
 
 
-CITY_REGISTRY: dict[str, CityConfig] = {
-    "Tokyo": CityConfig(name="Tokyo", location_query="Tokyo"),
-    "New York": CityConfig(name="New York", location_query="New York City"),
-}
+def _parse_city(raw: dict[str, Any]) -> CityConfig:
+    city_id = str(raw.get("id") or "").strip()
+    if not city_id:
+        raise ValueError("City entry missing id")
+    region = str(raw.get("region") or "").strip().lower()
+    if region not in VALID_REGIONS:
+        raise ValueError(f"City {city_id!r} has invalid region {region!r}")
+    aliases_raw = raw.get("aliases") or []
+    if not isinstance(aliases_raw, list):
+        raise ValueError(f"City {city_id!r} aliases must be a list")
+    return CityConfig(
+        name=city_id,
+        location_query=str(raw.get("location_query") or city_id).strip(),
+        region=region,
+        country=str(raw.get("country") or "").strip(),
+        lat=float(raw["lat"]),
+        lng=float(raw["lng"]),
+        aliases=tuple(str(a).strip() for a in aliases_raw if str(a).strip()),
+    )
+
+
+def load_city_registry(path: Path | None = None) -> dict[str, CityConfig]:
+    """Load cities from JSON. Fail fast if the file is missing or invalid."""
+    cities_path = path or _CITIES_PATH
+    if not cities_path.is_file():
+        raise FileNotFoundError(f"City registry not found: {cities_path}")
+    data = json.loads(cities_path.read_text(encoding="utf-8"))
+    if not isinstance(data, list) or not data:
+        raise ValueError(f"City registry must be a non-empty list: {cities_path}")
+    registry: dict[str, CityConfig] = {}
+    for item in data:
+        if not isinstance(item, dict):
+            raise ValueError("Each city entry must be an object")
+        cfg = _parse_city(item)
+        if cfg.name in registry:
+            raise ValueError(f"Duplicate city id: {cfg.name!r}")
+        registry[cfg.name] = cfg
+    return registry
+
+
+CITY_REGISTRY: dict[str, CityConfig] = load_city_registry()
+
+
+def city_ids() -> list[str]:
+    """Stable sorted list of city ids for API enums and validation messages."""
+    return sorted(CITY_REGISTRY.keys())
+
 
 PHASES: tuple[str, ...] = ("MORNING", "AFTERNOON", "EVENING", "NIGHT")
 

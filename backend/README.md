@@ -27,9 +27,22 @@ uvicorn main:app --reload --port 8000
 ```
 
 - Health: `GET http://localhost:8000/api/health`
+- Cities: `GET http://localhost:8000/api/cities`
 - Generate: `POST http://localhost:8000/api/generate-itinerary`
 - Alias: `POST http://localhost:8000/api/itinerary`
 - Refine (requires `GEMINI_API_KEY`): `POST http://localhost:8000/api/refine`
+
+### Adding a city
+
+Edit [`data/cities.json`](data/cities.json). Each entry needs `id`, `label`, `location_query` (Qloo geo string), `region` (`us` | `europe` | `asia` | `india` | `oceania`), `country`, `lat`, `lng`, and optional `aliases`. Restart uvicorn; the frontend map picker picks cities up from `/api/cities`.
+
+Probe a new city before demoing it:
+
+```bash
+python scripts/qloo_probe.py --cities Paris Chicago Mumbai Sydney
+```
+
+Curated fallback itineraries exist only for Tokyo and New York. Other cities degrade honestly when Qloo is unavailable.
 
 Example:
 

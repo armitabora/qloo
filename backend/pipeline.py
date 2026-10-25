@@ -20,7 +20,7 @@ from qloo.categories import CategoryResolver
 from qloo.client import QlooClient, QlooError
 from qloo.places import PlaceCandidate, PlaceFinder
 from qloo.resolver import AnchorResolver
-from services.fallback_data import FALLBACK_ITINERARIES
+from services.fallback_data import degraded_fallback_slots, get_fallback_itinerary
 
 logger = logging.getLogger("vibe.pipeline")
 
@@ -145,6 +145,14 @@ async def _build_places(
     return places, calls
 
 
+def _fallback_slots_for_city(city: str) -> list[dict]:
+    """Curated slots when available; otherwise honest degraded placeholders."""
+    curated = get_fallback_itinerary(city)
+    if curated:
+        return curated
+    return degraded_fallback_slots(city)
+
+
 def _fallback_response(
     request: ItineraryRequest,
     resolutions: list[AnchorResolution],
@@ -152,7 +160,7 @@ def _fallback_response(
     latency_ms: int,
     qloo_calls: int,
 ) -> ItineraryResponse:
-    raw = FALLBACK_ITINERARIES.get(request.city) or FALLBACK_ITINERARIES["Tokyo"]
+    raw = _fallback_slots_for_city(request.city)
     stops = [
         ItineraryStop(
             phase=item["phase"].upper() if item["phase"].lower() in {p.lower() for p in PHASES} else item["phase"],
@@ -234,15 +242,35 @@ async def generate_itinerary(
                 qloo_calls=client.call_count - qloo_calls_before,
             )
 
-        # Fill any missing phase from fallback for that slot only (honest mix).
-        fallback_slots = FALLBACK_ITINERARIES.get(request.city) or FALLBACK_ITINERARIES["Tokyo"]
+        # Fill missing phases from curated fallback only (never another city's venues).
+        curated_slots = get_fallback_itinerary(request.city)
         chosen: list[tuple[str, Optional[PlaceCandidate], Optional[dict]]] = []
         for i, phase in enumerate(PHASES):
             place = places[i] if i < len(places) else None
-            if place is None:
-                chosen.append((phase, None, fallback_slots[i]))
+            if place is None and curated_slots is not None:
+                chosen.append((phase, None, curated_slots[i]))
             else:
                 chosen.append((phase, place, None))
+
+        # If every phase is empty and there is no curated fallback, degrade honestly.
+        if not any(c[1] for c in chosen) and curated_slots is None:
+            return _fallback_response(
+                request,
+                resolutions,
+                latency_ms=int((time.perf_counter() - started) * 1000),
+                qloo_calls=client.call_count - qloo_calls_before,
+            )
+
+        # Drop phases with neither a place nor a curated slot (should not happen
+        # when curated exists; when mixed qloo+gaps without curated, skip gap).
+        chosen = [c for c in chosen if c[1] is not None or c[2] is not None]
+        if not chosen:
+            return _fallback_response(
+                request,
+                resolutions,
+                latency_ms=int((time.perf_counter() - started) * 1000),
+                qloo_calls=client.call_count - qloo_calls_before,
+            )
 
         narratives, engine_name = await narrative.write(
             request=request,

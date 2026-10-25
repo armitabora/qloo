@@ -108,6 +108,34 @@ FALLBACK_ITINERARIES = {
 }
 
 
-def get_fallback_itinerary(city: str) -> list[dict]:
-    """Return pre-computed itinerary stops for the given city."""
-    return FALLBACK_ITINERARIES.get(city, FALLBACK_ITINERARIES["Tokyo"])
+def get_fallback_itinerary(city: str) -> list[dict] | None:
+    """Return curated fallback stops for the city, or None if none exist.
+
+    Only Tokyo and New York have curated fallbacks. Other cities must not
+    silently reuse another city's venues.
+    """
+    return FALLBACK_ITINERARIES.get(city)
+
+
+def degraded_fallback_slots(city: str) -> list[dict]:
+    """Honest placeholder stops when Qloo is unavailable and no curated data exists."""
+    note = (
+        f"We could not load live recommendations for {city} right now. "
+        "Try again shortly, or pick Tokyo or New York for a curated demo day."
+    )
+    phases = ("Morning", "Afternoon", "Evening", "Night")
+    labels = (
+        "Morning stop unavailable",
+        "Afternoon stop unavailable",
+        "Evening stop unavailable",
+        "Night stop unavailable",
+    )
+    return [
+        {
+            "phase": phase,
+            "venue": label,
+            "category": "Unavailable",
+            "vibe_narrative": note,
+        }
+        for phase, label in zip(phases, labels)
+    ]

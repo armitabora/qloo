@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Any, Optional
 
-from config import PHASES
+from config import PHASES, city_ids
 from models import AnchorResolution, ItineraryResponse, ItineraryStop
 from qloo.categories import CategoryResolver
 from qloo.client import QlooClient
@@ -38,7 +38,11 @@ TOOL_DECLARATIONS: list[dict[str, Any]] = [
         "parameters": {
             "type": "object",
             "properties": {
-                "city": {"type": "string", "enum": ["Tokyo", "New York"]},
+                "city": {
+                    "type": "string",
+                    "enum": city_ids(),
+                    "description": "Destination city id from the VibeGuide registry",
+                },
                 "phase": {
                     "type": "string",
                     "enum": ["MORNING", "AFTERNOON", "EVENING", "NIGHT"],

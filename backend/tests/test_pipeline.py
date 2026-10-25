@@ -163,3 +163,31 @@ async def test_missing_qloo_key_serves_fallback():
     assert resp.is_fallback
     assert all(s.source == "fallback" for s in resp.stops)
     assert resp.city == "New York"
+
+
+@pytest.mark.asyncio
+async def test_uncurated_city_fallback_is_honest():
+    """Paris has no curated venues; must not reuse Tokyo fallback names."""
+    settings_local = Settings(qloo_api_key="", gemini_api_key="")
+    from narrative.engine import NarrativeEngine
+
+    client = QlooClient(settings=settings_local)
+    resp = await generate_itinerary(
+        ItineraryRequest(city="Paris", vibe="lo-fi"),
+        client=client,
+        narrative=NarrativeEngine(settings=settings_local),
+        settings=settings_local,
+    )
+    assert resp.is_fallback
+    assert resp.city == "Paris"
+    venues = {s.venue for s in resp.stops}
+    assert "Lion Kissaten" not in venues
+    assert "Devoción" not in venues
+    assert any("could not load" in s.vibe_narrative.lower() for s in resp.stops)
+
+
+def test_registry_accepts_new_cities():
+    req = ItineraryRequest(city="Chicago", music="Radiohead")
+    assert req.city == "Chicago"
+    with pytest.raises(ValueError, match="/api/cities"):
+        ItineraryRequest(city="Atlantis", music="Radiohead")

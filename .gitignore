@@ -20,6 +20,9 @@ backend/scripts/captures/*
 !backend/scripts/captures/.gitkeep
 backend/tests/fixtures/live/
 
+# Local REA inspiration captures
+.rea-inspo/
+
 # Mac OS
 .DS_Store
 .pytest_cache/
