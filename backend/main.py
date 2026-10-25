@@ -93,6 +93,7 @@ async def api_generate_itinerary(payload: ItineraryRequest) -> ItineraryResponse
             status_code=422,
             detail={
                 "message": str(exc),
+                "code": "unrecognized_anchors",
                 "anchors_resolved": [r.model_dump() for r in exc.resolutions],
             },
         ) from exc

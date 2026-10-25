@@ -30,26 +30,30 @@ const COUNTRY_TO_REGION = {
 };
 
 const REGION_COLORS = {
-  us: '#5b8def',
-  europe: '#7aa2f7',
-  asia: '#5ec8bf',
-  india: '#8fbf6b',
-  oceania: '#d0b06a',
+  us: '#d4a373',
+  europe: '#c49262',
+  asia: '#3d5c48',
+  india: '#b8845a',
+  oceania: '#e8d4bc',
 };
 
 const REGION_ACCENT = {
-  us: '#93b8ff',
-  europe: '#b4c8ff',
-  asia: '#7ee8df',
-  india: '#b4d98a',
-  oceania: '#e8c97a',
+  us: '#e0b88a',
+  europe: '#d4a373',
+  asia: '#5a7a64',
+  india: '#c99a6e',
+  oceania: '#f1e3d3',
 };
 
-const CABLE_COLORS = ['#5b8def', '#5ec8bf', '#a78bfa', '#f0ab4e', '#7aa2f7'];
+const CABLE_COLORS = ['#d4a373', '#c49262', '#e0b88a', '#b8845a', '#e8d4bc'];
 
-const BASE_LAND = '#1e2a3d';
-const MUTED_LAND = '#141c2b';
-const LAND_STROKE = '#24344c';
+const BASE_LAND = '#2a4a38';
+const MUTED_LAND = '#152820';
+const LAND_STROKE = '#3d5c48';
+const MARKER_RING = '#f1e3d3';
+const MARKER_CORE = '#152820';
+const HOVER_LAND = '#f1e3d3';
+const FOCUS_LAND = '#e8d4bc';
 
 function project(lat, lng) {
   const x = ((lng + 180) / 360) * WIDTH;
@@ -564,7 +568,7 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
 
   if (loadError) {
     return (
-      <div className="m-6 rounded-2xl border border-red-900/40 bg-red-950/30 p-4 text-sm text-red-200">
+      <div className="m-6 rounded-2xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] p-4 text-sm text-[var(--color-danger-fg)]">
         Could not load cities. Is the backend running on port 8000?
       </div>
     );
@@ -579,7 +583,7 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
       {/* Full-bleed map stage */}
       <div
         ref={bindMapShell}
-        className="absolute inset-0 cursor-grab touch-none bg-[#060a12]"
+        className="absolute inset-0 cursor-grab touch-none bg-[var(--velvet-deep)]"
         style={{ touchAction: 'pan-y' }}
       >
         <svg
@@ -590,18 +594,18 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
           aria-label="Interactive world map. Ctrl+scroll or use buttons to zoom, drag to pan."
         >
           <defs>
-            <radialGradient id="ocean" cx="48%" cy="40%" r="85%">
-              <stop offset="0%" stopColor="#16304a" />
-              <stop offset="100%" stopColor="#060a12" />
+            <radialGradient id="velvet" cx="48%" cy="40%" r="85%">
+              <stop offset="0%" stopColor="var(--velvet-lit)" />
+              <stop offset="100%" stopColor="var(--velvet-deep)" />
             </radialGradient>
           </defs>
-          {/* Oversized so pan/zoom never reveals a hard ocean edge */}
+          {/* Oversized so pan/zoom never reveals a hard velvet edge */}
           <rect
             x={-WIDTH}
             y={-HEIGHT}
             width={WIDTH * 3}
             height={HEIGHT * 3}
-            fill="url(#ocean)"
+            fill="url(#velvet)"
           />
 
           <g
@@ -628,14 +632,14 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
                 ? REGION_COLORS[feat.region] || BASE_LAND
                 : MUTED_LAND;
               if ((isActiveRegion || isFocused) && hasDestinations) {
-                fill = REGION_ACCENT[feat.region] || '#dbe7ff';
+                fill = REGION_ACCENT[feat.region] || FOCUS_LAND;
               }
-              if (hasDestinations && hoveredCountry === feat.id) fill = '#e8eefc';
+              if (hasDestinations && hoveredCountry === feat.id) fill = HOVER_LAND;
               // No dark outline on muted land — long E–W coasts were reading as bars
               const stroke = !hasDestinations
                 ? 'none'
                 : isFocused || isActiveRegion
-                  ? 'rgba(255,255,255,0.35)'
+                  ? 'rgba(241,227,211,0.35)'
                   : LAND_STROKE;
               return (
                 <path
@@ -712,7 +716,7 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
                       cy={y}
                       r={r + 5 / Math.sqrt(view.scale)}
                       fill="none"
-                      stroke="#fff"
+                      stroke={MARKER_RING}
                       strokeWidth={1.1 / Math.sqrt(view.scale)}
                       opacity={0.9}
                     />
@@ -721,8 +725,8 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
                     cx={x}
                     cy={y}
                     r={r + 1.6 / Math.sqrt(view.scale)}
-                    fill="#0a101c"
-                    stroke="#fff"
+                    fill={MARKER_CORE}
+                    stroke={MARKER_RING}
                     strokeWidth={0.8 / Math.sqrt(view.scale)}
                     className="cursor-pointer"
                   />
@@ -730,7 +734,7 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
                     cx={x}
                     cy={y}
                     r={r}
-                    fill={isSelected ? '#fff' : REGION_COLORS[city.region] || '#e8eef8'}
+                    fill={isSelected ? MARKER_RING : REGION_COLORS[city.region] || FOCUS_LAND}
                     className="cursor-pointer"
                     role="button"
                     tabIndex={0}
@@ -751,7 +755,7 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
                       x={x}
                       y={y - r - 9 / Math.sqrt(view.scale)}
                       textAnchor="middle"
-                      fill="#fff"
+                      fill={MARKER_RING}
                       fontSize={Math.max(10, 13 / Math.sqrt(view.scale * 0.55))}
                       fontWeight="700"
                       style={{
@@ -769,30 +773,16 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
         </svg>
       </div>
 
-      {/* Top brand chrome */}
       {hero && (
-        <div
-          data-map-ui
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 px-5 pb-28 pt-7 md:px-8 md:pt-9"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(6,10,18,0.88) 0%, rgba(6,10,18,0.35) 45%, rgba(6,10,18,0) 100%)',
-          }}
-        >
-          <div className="pointer-events-auto">
-            <p className="mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-[10px] text-white/70">
+        <div data-map-ui className="pointer-events-none absolute left-0 top-0 z-10 w-[min(24rem,88vw)]">
+          <div className="map-lockup">
+            <p className="mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-fg)]/45">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-fg)]/20 text-[10px] text-[var(--color-fg)]/70">
                 1
               </span>
               Choose a city
             </p>
-            <h1
-              className="text-[clamp(2.5rem,6.5vw,5rem)] font-extrabold leading-[0.92] tracking-[-0.03em] text-white"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              VibeGuide
-            </h1>
-            <p className="mt-3 max-w-sm text-sm text-[var(--color-muted)] md:text-base">
+            <p className="max-w-[28ch] text-sm leading-relaxed text-[var(--color-muted)]">
               Drag to pan. Ctrl+scroll to zoom. Land on a city that fits your taste.
             </p>
           </div>
@@ -802,22 +792,22 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
       {/* Zoom controls */}
       <div
         data-map-ui
-        className="absolute bottom-20 left-4 z-20 flex flex-col overflow-hidden rounded-lg border border-white/15 bg-[#0b1220]/85 backdrop-blur-md md:bottom-8 md:left-6"
+        className="absolute bottom-20 left-4 z-20 flex flex-col overflow-hidden rounded-lg border border-[var(--color-fg)]/15 bg-[var(--velvet-deep)]/85 backdrop-blur-md md:bottom-8 md:left-6"
       >
         <button
           type="button"
           aria-label="Zoom in"
           onClick={() => zoomBy(1.35)}
-          className="cursor-pointer px-3 py-2 text-lg leading-none text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+          className="cursor-pointer px-3 py-2 text-lg leading-none text-[var(--color-fg)]/85 transition-colors hover:bg-[var(--color-fg)]/10 hover:text-[var(--color-fg)]"
         >
           +
         </button>
-        <div className="h-px bg-white/10" />
+        <div className="h-px bg-[var(--color-fg)]/10" />
         <button
           type="button"
           aria-label="Zoom out"
           onClick={() => zoomBy(1 / 1.35)}
-          className="cursor-pointer px-3 py-2 text-lg leading-none text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+          className="cursor-pointer px-3 py-2 text-lg leading-none text-[var(--color-fg)]/85 transition-colors hover:bg-[var(--color-fg)]/10 hover:text-[var(--color-fg)]"
         >
           −
         </button>
@@ -827,20 +817,20 @@ export default function CityMapPicker({ value, onChange, hero = false }) {
       {hero && selected && (
         <div
           data-map-ui
-          className="absolute bottom-0 left-0 z-20 flex w-full items-center justify-between gap-4 border-t border-white/10 bg-[#0b1220]/88 px-5 py-3 backdrop-blur-md md:px-6"
+          className="absolute bottom-0 left-0 z-20 flex w-full items-center justify-between gap-4 border-t border-[var(--color-fg)]/10 bg-[var(--velvet-deep)]/88 px-5 py-3 backdrop-blur-md md:px-6"
         >
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-fg)]/40">
               Selected
             </p>
-            <p className="truncate text-base font-semibold text-white md:text-lg">
+            <p className="truncate text-base font-semibold text-[var(--color-fg)] md:text-lg">
               {selected.label}
-              <span className="font-normal text-white/45"> · {selected.country}</span>
+              <span className="font-normal text-[var(--color-fg)]/45"> · {selected.country}</span>
             </p>
           </div>
           <a
             href="#vibe"
-            className="shrink-0 cursor-pointer rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-transform duration-200 hover:scale-[0.98] hover:bg-slate-100"
+            className="shrink-0 cursor-pointer rounded-full bg-[var(--silk-beige)] px-5 py-2.5 text-sm font-semibold text-[var(--ink)] transition-transform duration-200 hover:scale-[0.98] hover:bg-[color-mix(in_oklch,var(--silk-beige)_88%,var(--antique-gold))]"
           >
             Set vibe →
           </a>

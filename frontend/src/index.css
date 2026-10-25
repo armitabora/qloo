@@ -3,16 +3,39 @@
 @import 'lenis/dist/lenis.css';
 
 :root {
-  --color-bg: #0b1220;
-  --color-surface: #121a2b;
-  --color-fg: #f1f5f9;
-  --color-muted: #94a3b8;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-accent: #3b82f6;
-  --color-accent-soft: rgba(59, 130, 246, 0.18);
+  --emerald-night: #1f3b2c;
+  --antique-gold: #d4a373;
+  --silk-beige: #f1e3d3;
+
+  --color-bg: var(--emerald-night);
+  --velvet-deep: color-mix(in oklch, var(--emerald-night) 70%, black);
+  --velvet-lit: color-mix(in oklch, var(--emerald-night) 78%, var(--antique-gold));
+  --color-surface: color-mix(in oklch, var(--emerald-night) 86%, var(--silk-beige));
+  --color-fg: var(--silk-beige);
+  --color-muted: color-mix(in oklch, var(--silk-beige) 62%, var(--emerald-night));
+  --color-border: color-mix(in oklch, var(--silk-beige) 16%, transparent);
+  --color-accent: var(--antique-gold);
+  --color-accent-soft: color-mix(in oklch, var(--antique-gold) 22%, transparent);
+
+  --moss: color-mix(in oklch, var(--emerald-night) 54%, var(--silk-beige));
+  --parchment: color-mix(in oklch, var(--silk-beige) 72%, var(--emerald-night));
+  --hearth: color-mix(in oklch, var(--moss) 46%, var(--parchment));
+  --paper: var(--silk-beige);
+  --ink: var(--emerald-night);
+  --ink-muted: color-mix(in oklch, var(--emerald-night) 55%, var(--silk-beige));
+  --grain: var(--antique-gold);
+
+  --color-danger: #8f3d3a;
+  --color-danger-fg: #f3d4d0;
+  --color-danger-bg: color-mix(in oklch, #8f3d3a 58%, black);
+
   --font-display: 'Syne', sans-serif;
   --font-body: 'Manrope', sans-serif;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  color-scheme: dark;
 }
 
 html,
@@ -30,8 +53,106 @@ body {
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.35);
-  color: #fff;
+  background: color-mix(in oklch, var(--antique-gold) 42%, transparent);
+  color: var(--emerald-night);
+}
+
+/* Left-edge wordmark. The plate covers the type, then feathers down and to the right. */
+.map-lockup {
+  position: relative;
+  padding: 1.75rem 1.25rem 1.15rem;
+  pointer-events: auto;
+}
+
+@media (min-width: 768px) {
+  .map-lockup {
+    padding: 2.25rem 2rem 1.25rem;
+  }
+}
+
+.map-lockup::before,
+.map-lockup::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 74%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 74%, transparent 100%);
+}
+
+.map-lockup::before {
+  inset: 0;
+  background: color-mix(in oklch, var(--velvet-deep) 94%, transparent);
+}
+
+.map-lockup::after {
+  top: 100%;
+  height: 4.75rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--velvet-deep) 94%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+/* Scroll dissolve: pinned overlay (title or vibe) fades while the next scene stays sticky. */
+.opening-stage {
+  --veil: 240svh;
+  height: calc(var(--veil) + 100svh);
+}
+
+.vibe-stage {
+  background: linear-gradient(
+    180deg,
+    var(--moss) 0%,
+    var(--hearth) 42%,
+    var(--parchment) 72%,
+    var(--paper) 100%
+  );
+}
+
+.intro-veil {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--veil);
+  pointer-events: none;
+}
+
+.opening-anchor {
+  position: absolute;
+  top: var(--veil);
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.opening-anchor--start {
+  top: 0;
+}
+
+/* Pinned to the viewport and faded as a whole, so no gradient edge travels over the map. */
+.intro-ocean {
+  background: radial-gradient(
+    88% 58% at 50% 46%,
+    color-mix(in oklch, var(--velvet-lit) 26%, var(--color-bg)) 0%,
+    var(--color-bg) 68%
+  );
+}
+
+.intro-ocean-calm {
+  background: linear-gradient(
+    180deg,
+    var(--color-bg) 0%,
+    var(--color-bg) 64%,
+    color-mix(in oklch, var(--emerald-night) 82%, black) 84%,
+    var(--velvet-deep) 100%
+  );
 }
 
 :focus-visible {
@@ -49,7 +170,7 @@ body {
 /* Nested panel scrollbars */
 .vibe-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-color: color-mix(in oklch, var(--silk-beige) 28%, transparent) transparent;
 }
 
 .vibe-scroll::-webkit-scrollbar {
@@ -57,6 +178,409 @@ body {
 }
 
 .vibe-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: color-mix(in oklch, var(--antique-gold) 45%, transparent);
   border-radius: 999px;
+}
+
+/* Feelings Engine–style crossfade atmosphere (REA: .crossfading-background) */
+.crossfade-atmosphere {
+  background-color: var(--moss);
+  background-image: linear-gradient(
+    180deg,
+    var(--moss) 0%,
+    var(--hearth) 100%
+  );
+  z-index: 0;
+}
+
+.crossfade-atmosphere__layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  animation: crossfade-fade 16s infinite;
+  will-change: opacity;
+}
+
+.crossfade-atmosphere__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: color-mix(in oklch, var(--moss) 70%, transparent);
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--moss) 82%, transparent) 0%,
+    color-mix(in oklch, var(--hearth) 78%, transparent) 100%
+  );
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
+}
+
+.crossfade-atmosphere__grain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+@keyframes crossfade-fade {
+  0% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crossfade-atmosphere__layer {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .crossfade-atmosphere__veil {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--moss);
+    background-image: linear-gradient(180deg, var(--moss) 0%, var(--hearth) 100%);
+  }
+}
+
+/* Silk beige + antique gold woodgrain */
+.woodgrain-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--parchment);
+  background-image: linear-gradient(
+    180deg,
+    var(--hearth) 0%,
+    var(--parchment) 38%,
+    var(--paper) 100%
+  );
+}
+
+.woodgrain-atmosphere__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--grain);
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.output-section {
+  color: var(--ink);
+  color-scheme: light;
+  background-color: var(--hearth);
+}
+
+/* ── Itinerary carousel (button-driven track, no nested scroll) ─ */
+.itinerary-carousel {
+  --itinerary-index: 0;
+  --itinerary-slide-w: 62vw;
+  --itinerary-gap: 3.5rem;
+  width: 100%;
+}
+
+@media (min-width: 650px) {
+  .itinerary-carousel {
+    --itinerary-slide-w: min(42vh, 400px);
+    --itinerary-gap: 7rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .itinerary-carousel {
+    --itinerary-slide-w: min(38vh, 380px);
+    --itinerary-gap: 10rem;
+  }
+}
+
+.itinerary-carousel__viewport {
+  position: relative;
+  margin-top: 1.25rem;
+  outline: none;
+}
+
+.itinerary-carousel__stage {
+  position: relative;
+  overflow: clip;
+  outline: none;
+  user-select: none;
+  container-type: inline-size;
+  container-name: itinerary-stage;
+  touch-action: pan-y;
+  overscroll-behavior: none;
+}
+
+.itinerary-carousel__track {
+  display: flex;
+  align-items: center;
+  gap: var(--itinerary-gap);
+  width: max-content;
+  padding-inline: calc(50cqw - var(--itinerary-slide-w) / 2);
+  transform: translate3d(
+    calc(-1 * var(--itinerary-index) * (var(--itinerary-slide-w) + var(--itinerary-gap))),
+    0,
+    0
+  );
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.itinerary-carousel__slide {
+  flex: 0 0 var(--itinerary-slide-w);
+  width: var(--itinerary-slide-w);
+  padding: 0.75rem 0;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+.itinerary-sleeve {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.itinerary-sleeve__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  box-shadow: rgba(0, 0, 0, 0.45) 2px 8px 16px 0px;
+}
+
+.itinerary-sleeve__fallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 1.25rem;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklch, var(--emerald-night) 88%, var(--silk-beige)) 0%,
+    var(--velvet-deep) 100%
+  );
+  border: 1px solid color-mix(in oklch, var(--silk-beige) 14%, transparent);
+  box-shadow: rgba(0, 0, 0, 0.45) 2px 8px 16px 0px;
+  text-align: left;
+  color: var(--silk-beige);
+}
+
+.itinerary-sleeve__phase {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--silk-beige) 48%, transparent);
+}
+
+.itinerary-sleeve__initial {
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 12vw, 6rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: color-mix(in oklch, var(--silk-beige) 94%, transparent);
+}
+
+.itinerary-sleeve__venue {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: color-mix(in oklch, var(--silk-beige) 72%, transparent);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.itinerary-carousel__hit-areas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.itinerary-carousel__hit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: none;
+}
+
+.itinerary-carousel__hit--prev {
+  left: 0;
+}
+
+.itinerary-carousel__hit--next {
+  right: 0;
+}
+
+.itinerary-carousel__cursor {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  color: var(--ink);
+  filter: drop-shadow(0 0 1px color-mix(in oklch, var(--paper) 90%, transparent));
+  transition: opacity 120ms ease;
+}
+
+.itinerary-carousel__mobile-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 1rem;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .itinerary-carousel__mobile-nav {
+    display: none;
+  }
+}
+
+.itinerary-carousel__mobile-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklch, var(--ink) 28%, transparent);
+  background: transparent;
+  color: color-mix(in oklch, var(--ink) 90%, transparent);
+  cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.itinerary-carousel__mobile-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.itinerary-carousel__dots {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.itinerary-carousel__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--ink) 22%, transparent);
+}
+
+.itinerary-carousel__dot.is-active {
+  background: var(--ink);
+}
+
+/* Compact description under the carousel — copy only, no photo */
+.itinerary-featured {
+  margin-top: 0.75rem;
+  border-top: 1px solid color-mix(in oklch, var(--ink) 16%, transparent);
+  padding: 1.15rem 1.5rem 0;
+  max-width: 46rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 768px) {
+  .itinerary-featured {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 1.25rem;
+  }
+}
+
+.itinerary-featured__kicker {
+  margin: 0 0 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.itinerary-featured__copy {
+  min-height: 0;
+}
+
+.itinerary-featured__title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.6vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.itinerary-featured__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.itinerary-featured__narrative {
+  margin: 0.7rem 0 0;
+  font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--ink) 78%, var(--paper));
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.itinerary-featured__actions {
+  margin-top: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itinerary-carousel__track {
+    transition: none;
+  }
+
+  .itinerary-carousel__hit {
+    cursor: pointer;
+  }
 }

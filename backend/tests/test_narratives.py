@@ -11,7 +11,7 @@ from config import Settings
 from models import AnchorResolution, Influence, ItineraryRequest
 from narrative.engine import NarrativeEngine
 from narrative.gemini import GeminiNarrativeError, generate_with_gemini, validate_narratives
-from narrative.template import _descriptor, build_narratives
+from narrative.template import _descriptor, build_narratives, narrative_for_place
 from qloo.places import PlaceCandidate
 
 
@@ -76,6 +76,65 @@ def test_descriptor_filters_junk_tags():
     assert "25 29" not in result
     assert "restroom" not in result.lower()
     assert "bar" in result.lower()
+
+
+def test_descriptor_uses_a_real_venue_not_an_amenity():
+    museum = PlaceCandidate(
+        entity_id="p",
+        name="Mori Art Museum",
+        category="Gift shop",
+        tags=["Architecture", "Sunset view", "Photography", "Gift shop"],
+    )
+    text = _descriptor(museum)
+    assert text == "a museum"
+    assert "gift" not in text
+
+    cafe = PlaceCandidate(
+        entity_id="p2",
+        name="Little Soul Cafe",
+        category="Solo diners",
+        tags=["Solo diners", "Locals", "Old fashioned"],
+    )
+    cafe_text = _descriptor(cafe)
+    assert cafe_text == "a cafe"
+    assert "solo" not in cafe_text
+
+    beat = PlaceCandidate(
+        entity_id="p3",
+        name="BEATCAFE",
+        category="Bar service",
+        tags=["Dancing", "Walkable", "Bar service", "Dine in"],
+    )
+    beat_text = _descriptor(beat)
+    assert beat_text == "a cafe"
+    assert "service" not in beat_text
+
+
+def test_narrative_describes_the_place_not_an_occasion_tag():
+    request = ItineraryRequest(city="Tokyo", music="Nujabes")
+    place = PlaceCandidate(
+        entity_id="p-night",
+        name="BAR Zolddich",
+        category="Birthday",
+        tags=["Birthday", "Bar", "Cocktails"],
+        affinity=0.76,
+        influenced_by=[Influence(anchor="Nujabes", matched_name="Nujabes", score=0.7)],
+    )
+    text = narrative_for_place(
+        phase="NIGHT",
+        place=place,
+        resolutions=_resolutions(),
+        request=request,
+    )
+    assert text.startswith("Close the night at BAR Zolddich, a ")
+    assert "bar" in text.lower()
+    assert "birthday" not in text.lower()
+    assert "Qloo" not in text
+    assert "insights" not in text.lower()
+    assert "Nujabes" in text
+    assert text.endswith(".")
+    # One lead sentence about the venue, then why it is here.
+    assert text.count(". ") >= 1
 
 
 def test_each_phase_has_different_opener():

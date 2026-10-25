@@ -73,9 +73,12 @@ def _build_prompt(
         f"City: {request.city}\n"
         f"User anchors (JSON): {json.dumps(anchors)}\n"
         f"Stops (JSON): {json.dumps(stops_payload)}\n\n"
-        "Write exactly 4 short vibe narratives (1–2 sentences each, under 40 words).\n"
+        "Write exactly 4 short vibe narratives (1–2 complete sentences each, under 40 words).\n"
         "Each narrative MUST mention the exact venue name for that stop.\n"
-        "Ground the reason in the user's anchors and any influenced_by / tags provided.\n"
+        "Say what kind of place it is, using its real category (bar, cafe, museum). "
+        "Never describe a place as an occasion such as a birthday.\n"
+        "Explain, in plain language, how it fits the user's anchors. "
+        "Do not mention Qloo, insights, graphs, or match scores.\n"
         "Do not invent extra venues. Do not number the lines with 1. 2. 3. 4.\n"
         'Return ONLY valid JSON: {"narratives": ["...", "...", "...", "..."]}'
     )
