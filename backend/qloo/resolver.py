@@ -3,12 +3,42 @@
 from __future__ import annotations
 
 import logging
+import re
+import unicodedata
 from typing import Any, Optional
 
 from models import AnchorResolution
 from qloo.client import QlooClient, QlooError
 
 logger = logging.getLogger("vibe.qloo.resolver")
+
+# Below this, a Qloo hit is a different name that merely came back from search.
+_MIN_MATCH = 60.0
+_KEYBOARD_ROWS = ("qwertyuiop", "asdfghjkl", "zxcvbnm")
+# Words that show up in many titles and must not carry a match on their own.
+_GENERIC_TOKENS = frozenset(
+    {
+        "studio",
+        "studios",
+        "music",
+        "film",
+        "films",
+        "movie",
+        "movies",
+        "night",
+        "house",
+        "band",
+        "group",
+        "records",
+        "sound",
+        "pictures",
+        "photo",
+        "entertainment",
+        "productions",
+        "production",
+        "official",
+    }
+)
 
 
 def _entity_id(entity: dict[str, Any]) -> Optional[str]:
@@ -23,6 +53,129 @@ def _entity_name(entity: dict[str, Any]) -> str:
 def _entity_type(entity: dict[str, Any]) -> Optional[str]:
     t = entity.get("type") or entity.get("entity_type")
     return str(t) if t else None
+
+
+def _fold(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(c for c in text if not unicodedata.combining(c))
+
+
+def _compact(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", _fold(text))
+
+
+def _tokens(text: str) -> list[str]:
+    folded = _fold(text).replace("&", " and ")
+    return re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", folded)
+
+
+# Real 3-letter anchors that sit on one keyboard row. Everything else that
+# tight ("sda", "qwe") is mash, even if Qloo has a record with that name.
+_SHORT_ROW_WORDS = frozenset({"sad", "dad", "pop"})
+
+
+def _same_row_cluster(compact: str) -> bool:
+    """True when every letter is huddled on one keyboard row.
+
+    "sada", "asda", and "sdasd" are home-row mashes. They must not match a
+    film or brand that happens to share the spelling. "Sade" uses two rows,
+    so a real name still gets through.
+    """
+    if len(compact) < 3 or not compact.isalpha():
+        return False
+    if compact in _SHORT_ROW_WORDS:
+        return False
+    # "dada" / "coco" — a doubled pair, not a scramble.
+    if len(compact) == 4 and compact[:2] == compact[2:]:
+        return False
+    cols: list[int] = []
+    row: Optional[int] = None
+    for ch in compact:
+        found: Optional[tuple[int, int]] = None
+        for row_i, keys in enumerate(_KEYBOARD_ROWS):
+            col = keys.find(ch)
+            if col >= 0:
+                found = (col, row_i)
+                break
+        if found is None:
+            return False
+        col, row_i = found
+        if row is None:
+            row = row_i
+        elif row_i != row:
+            return False
+        cols.append(col)
+    return max(cols) - min(cols) <= 2
+
+
+def looks_like_gibberish(text: str) -> bool:
+    """Keyboard mash and repeated syllables, not short real names like BTS or Coco."""
+    compact = _compact(text)
+    if len(compact) < 2:
+        return True
+    if len(compact) >= 4 and len(set(compact)) == 1:
+        return True
+    n = len(compact)
+    for size in range(1, n // 2 + 1):
+        if n % size:
+            continue
+        reps = n // size
+        if compact[:size] * reps != compact:
+            continue
+        if (size >= 3 and reps >= 2) or reps >= 3:
+            return True
+    for row in _KEYBOARD_ROWS:
+        if len(compact) >= 4 and (compact in row or compact in row[::-1]):
+            return True
+    if _same_row_cluster(compact):
+        return True
+    return False
+
+
+def match_score(query: str, name: str, *, partial: bool = False) -> float:
+    """How confidently `name` is the thing the user typed.
+
+    Short queries must be a whole token. "sda" is not "S. Dali Museum",
+    and "Studio Ghibli" is not "Picsart Photo Studio".
+    """
+    if looks_like_gibberish(query):
+        return 0.0
+    q_compact = _compact(query)
+    n_compact = _compact(name)
+    if len(q_compact) < 2 or not n_compact:
+        return 0.0
+    if q_compact == n_compact:
+        return 100.0
+
+    q_compacts = [c for c in (_compact(t) for t in _tokens(query)) if c]
+    n_compacts = [c for c in (_compact(t) for t in _tokens(name)) if c]
+    if not q_compacts or not n_compacts:
+        return 0.0
+
+    if all(c in n_compacts for c in q_compacts):
+        return 85.0
+
+    # "radio" → "Radiohead". Never "sda" → "S. Dali Museum" via a 3-letter prefix.
+    if len(q_compact) >= 4 and n_compact.startswith(q_compact):
+        return 75.0
+
+    longest = max(len(c) for c in q_compacts)
+    if longest >= 4:
+        long_tokens = [c for c in q_compacts if len(c) == longest]
+        if all(c in n_compacts for c in long_tokens):
+            return 70.0
+
+    # "Studio Ghibli" → "Ghibli", but not "Studio Ghibli" → "Picsart Photo Studio".
+    distinctive = [c for c in q_compacts if len(c) >= 5 and c not in _GENERIC_TOKENS]
+    if distinctive:
+        longest_distinctive = max(distinctive, key=len)
+        if longest_distinctive in n_compacts:
+            return 72.0
+
+    # Vibes: "cozy lo-fi" may come back as the tag "Lo-Fi".
+    if partial and any(len(c) >= 4 and c in n_compacts for c in q_compacts):
+        return 65.0
+    return 0.0
 
 
 class AnchorResolver:
@@ -51,9 +204,13 @@ class AnchorResolver:
         return results
 
     async def resolve_music(self, text: str) -> AnchorResolution:
+        if looks_like_gibberish(text):
+            return AnchorResolution(input=text, kind="music", resolved=False)
         return await self._resolve_entity(text, kind="music", types=self.MUSIC_TYPES)
 
     async def resolve_film(self, text: str) -> AnchorResolution:
+        if looks_like_gibberish(text):
+            return AnchorResolution(input=text, kind="film", resolved=False)
         # Prefer brand for studio names, then movie / person.
         ordered_types = ["urn:entity:brand", "urn:entity:movie", "urn:entity:person"]
         hits: list[dict[str, Any]] = []
@@ -77,30 +234,29 @@ class AnchorResolver:
         return AnchorResolution(input=text, kind="film", resolved=False)
 
     async def resolve_vibe(self, text: str) -> AnchorResolution:
+        if looks_like_gibberish(text):
+            return AnchorResolution(input=text, kind="vibe", resolved=False)
         try:
             tags = await self.client.tags(text, take=8)
         except QlooError as exc:
             logger.warning("vibe tag search failed for %r: %s", text, exc)
             tags = []
         best = None
-        best_score = -1.0
-        needle = text.lower()
+        best_key: Optional[tuple[float, float]] = None
         for tag in tags:
             tid = tag.get("id") or tag.get("tag_id")
             name = str(tag.get("name") or "")
             if not tid:
                 continue
-            score = 0.0
-            if needle and needle in name.lower():
-                score += 5
-            if needle.replace(" ", "_") in str(tid).lower():
-                score += 3
-            # Prefer non-media tags for vibe aesthetics.
+            score = match_score(text, name, partial=True)
+            if score < _MIN_MATCH:
+                continue
+            # Prefer non-media tags for vibe aesthetics when the name match ties.
             blob = f"{tid} {name}".lower()
-            if any(x in blob for x in ("genre:media", "urn:tag:genre:movie", "artist")):
-                score -= 2
-            if score > best_score:
-                best_score = score
+            media_penalty = 2.0 if any(x in blob for x in ("genre:media", "urn:tag:genre:movie", "artist")) else 0.0
+            key = (score - media_penalty, score)
+            if best_key is None or key > best_key:
+                best_key = key
                 best = tag
         if best:
             return AnchorResolution(
@@ -135,24 +291,7 @@ class AnchorResolver:
 
     @staticmethod
     def _name_score(query: str, name: str) -> float:
-        q = query.strip().lower()
-        n = (name or "").strip().lower()
-        if not q or not n:
-            return 0.0
-        if q == n:
-            return 100.0
-        if n.startswith(q) or q.startswith(n):
-            return 80.0
-        if q in n:
-            # Penalize long noisy names that merely contain the query
-            # (e.g. "Picsart Photo Studio" for "Studio Ghibli").
-            return 40.0 - min(20.0, abs(len(n) - len(q)) * 0.5)
-        q_tokens = set(q.split())
-        n_tokens = set(n.split())
-        if not q_tokens:
-            return 0.0
-        overlap = len(q_tokens & n_tokens) / len(q_tokens)
-        return overlap * 30.0
+        return match_score(query, name)
 
     @classmethod
     def _pick_best(
@@ -171,11 +310,10 @@ class AnchorResolver:
             except ValueError:
                 type_rank = 99
             name_score = cls._name_score(query, _entity_name(entity))
-            # Require a minimum name match so irrelevant hits lose.
             return (-name_score, type_rank, 0 if _entity_id(entity) else 1)
 
         best = sorted(hits, key=rank)[0]
-        if query and cls._name_score(query, _entity_name(best)) < 25.0:
+        if query and cls._name_score(query, _entity_name(best)) < _MIN_MATCH:
             return None
         return best
 

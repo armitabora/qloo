@@ -15,7 +15,8 @@ from qloo.resolver import AnchorResolver
 
 logger = logging.getLogger("vibe.qloo.places")
 
-# Junk patterns found in live Qloo responses (age ranges, payments, amenities)
+# Junk patterns found in live Qloo responses (age ranges, payments, amenities,
+# and occasion labels that are not what a place is).
 _TAG_JUNK = re.compile(
     r"^\d[\d\s\-]+$"  # pure numbers / age ranges: "25 29", "30 34"
     r"|nfc|mobile payment|credit card"  # payment methods
@@ -25,13 +26,103 @@ _TAG_JUNK = re.compile(
     r"|front desk|check.?in|check.?out"
     r"|parking\b|wifi\b|wi-fi"
     r"|delivery\b|drive.?thru"  # purely operational
-    r"|^place$",  # too generic to be useful
+    r"|^place$"  # too generic to be useful
+    r"|\bbirthday\b|\banniversary\b|\bwedding\b|\bbachelorette\b"
+    r"|\bdate night\b|\bkid friendly\b|\bfamily friendly\b|\bgood for groups\b"
+    r"|\btourists?\b",
     re.IGNORECASE,
+)
+
+# Amenity and audience labels that contain a venue word but are not the place type.
+# "Bar service", "Solo diners", and "Gift shop" were showing up as the description.
+_SKIP_AS_VENUE = re.compile(
+    r"\bservice\b|\bonsite\b|\bsolo diners?\b|\bgift shops?\b|\bgood for\b|\btakeout\b|\btakeaway\b",
+    re.IGNORECASE,
+)
+
+_NAME_KIND = re.compile(
+    r"\b(museums?|galleries|restaurants?|caf[eé]s?|coffees?|izakayas?|ramens?|"
+    r"baker(?:y|ies)|nightclubs?|pubs?|lounges?|bars?|parks?|temples?|shrines?)\b",
+    re.IGNORECASE,
+)
+
+_VENUE_TIERS: tuple[tuple[int, re.Pattern[str]], ...] = (
+    (
+        40,
+        re.compile(
+            r"\b(cocktail bars?|jazz clubs?|music venues?|record stores?|"
+            r"coffee shops?|art galleries|bookstores?|book shops?)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        30,
+        re.compile(
+            r"\b(museums?|galleries|restaurants?|caf[eé]s?|izakaya|ramen|"
+            r"baker(?:y|ies)|nightclubs?|pubs?|lounges?|kissaten|tea houses?|"
+            r"diners?|bistros?)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (25, re.compile(r"\bbars?\b", re.IGNORECASE)),
+    (
+        15,
+        re.compile(
+            r"\b(parks?|temples?|shrines?|cinemas?|theat(?:er|re)s?|markets?|"
+            r"brewer(?:y|ies)|winer(?:y|ies)|karaoke)\b",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
 
 def _is_useful_tag(name: str) -> bool:
     return bool(name) and len(name) >= 3 and not _TAG_JUNK.search(name)
+
+
+def venue_rank(name: str) -> int:
+    """Higher means the label is a real kind of place. 0 means don't use it."""
+    if not name or not _is_useful_tag(name) or _SKIP_AS_VENUE.search(name):
+        return 0
+    best = 0
+    for score, pattern in _VENUE_TIERS:
+        if pattern.search(name):
+            best = max(best, score)
+    return best
+
+
+def best_venue_label(labels: list[str]) -> str:
+    best_name = ""
+    best_score = 0
+    for label in labels:
+        score = venue_rank(label)
+        if score > best_score:
+            best_score = score
+            best_name = label.strip()
+    return best_name
+
+
+def _canonical_kind(word: str) -> str:
+    w = word.casefold().replace("é", "e")
+    if w.endswith("ies") and len(w) > 4:
+        return w[:-3] + "y"
+    if w.endswith("s") and not w.endswith("ss") and len(w) > 3:
+        return w[:-1]
+    return w
+
+
+def kind_from_name(name: str) -> str:
+    """When tags are amenities, the venue name is often the only real type."""
+    if not name:
+        return ""
+    match = _NAME_KIND.search(name)
+    if match:
+        return _canonical_kind(match.group(1))
+    compact = re.sub(r"[^a-z]", "", name.casefold())
+    for suffix in ("museum", "cafe", "bar", "ramen", "izakaya"):
+        if compact.endswith(suffix) and len(compact) > len(suffix):
+            return suffix
+    return ""
 
 
 @dataclass
@@ -102,17 +193,93 @@ def _address(entity: dict[str, Any]) -> Optional[str]:
     return None
 
 
+_SIZE_QUERY_KEYS = ("maxwidth", "maxheight", "w", "h", "width", "height")
+_GOOGLE_SIZE_SUFFIX = re.compile(r"=[swh]\d+[a-z0-9=-]*$", re.IGNORECASE)
+_PATH_DIMS = re.compile(r"/(\d{2,4})x(\d{2,4})/")
+
+
+def _upgrade_image_url(url: str) -> str:
+    """Prefer a larger raster when the source URL encodes a thumbnail size."""
+    if not url:
+        return url
+    upgraded = url
+    host = ""
+    try:
+        from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+        parts = urlsplit(url)
+        host = (parts.hostname or "").lower()
+        query = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)]
+        changed = False
+        new_query = []
+        for key, val in query:
+            if key.lower() in _SIZE_QUERY_KEYS:
+                try:
+                    if int(val) < 1200:
+                        new_query.append((key, "1600"))
+                        changed = True
+                        continue
+                except ValueError:
+                    pass
+            new_query.append((key, val))
+        path = parts.path
+        if "googleusercontent.com" in host or "ggpht.com" in host:
+            stripped, n = _GOOGLE_SIZE_SUFFIX.subn("=s1600", path)
+            if n:
+                path = stripped
+                changed = True
+        dim_match = _PATH_DIMS.search(path)
+        if dim_match:
+            try:
+                if int(dim_match.group(1)) < 800 or int(dim_match.group(2)) < 800:
+                    path = _PATH_DIMS.sub("/1600x1600/", path, count=1)
+                    changed = True
+            except ValueError:
+                pass
+        if changed:
+            upgraded = urlunsplit(
+                (parts.scheme, parts.netloc, path, urlencode(new_query), parts.fragment)
+            )
+    except Exception:
+        upgraded = url
+
+    if ("googleusercontent.com" in host or "ggpht.com" in host) and _GOOGLE_SIZE_SUFFIX.search(
+        upgraded
+    ):
+        upgraded = _GOOGLE_SIZE_SUFFIX.sub("=s1600", upgraded)
+    return upgraded
+
+
+def _collect_image_urls(value: Any, depth: int = 0) -> list[str]:
+    if depth > 4 or value is None:
+        return []
+    if isinstance(value, str) and value.startswith(("http://", "https://")):
+        return [value]
+    urls: list[str] = []
+    if isinstance(value, dict):
+        for key in ("original", "large", "full", "hires", "high_resolution", "url", "src", "href"):
+            nested = value.get(key)
+            if isinstance(nested, str) and nested.startswith(("http://", "https://")):
+                urls.append(nested)
+        for nested in value.values():
+            if isinstance(nested, (dict, list)):
+                urls.extend(_collect_image_urls(nested, depth + 1))
+    elif isinstance(value, list):
+        for item in value:
+            urls.extend(_collect_image_urls(item, depth + 1))
+    return urls
+
+
 def _image_url(entity: dict[str, Any]) -> Optional[str]:
     props = entity.get("properties") or {}
     if not isinstance(props, dict):
         return None
-    image = props.get("image")
-    if isinstance(image, dict):
-        url = image.get("url") or image.get("src")
-        return str(url) if url else None
-    if isinstance(image, str):
-        return image
-    return None
+    candidates: list[str] = []
+    for key in ("image", "images", "photo", "photos"):
+        candidates.extend(_collect_image_urls(props.get(key)))
+    if not candidates:
+        return None
+    return _upgrade_image_url(candidates[0])
 
 
 def _tag_names(entity: dict[str, Any], limit: int = 4) -> list[str]:
@@ -130,17 +297,32 @@ def _tag_names(entity: dict[str, Any], limit: int = 4) -> list[str]:
     return names
 
 
-def _category_label(entity: dict[str, Any], fallback: str = "Place") -> str:
-    for t in entity.get("tags") or []:
-        if isinstance(t, dict):
-            name = t.get("name") or t.get("id")
-        else:
-            name = str(t)
-        if name and _is_useful_tag(str(name)):
-            return str(name)
+def _tag_label(tag: Any) -> str:
+    if isinstance(tag, dict):
+        name = tag.get("name") or tag.get("id")
+    else:
+        name = str(tag)
+    return str(name).strip() if name else ""
+
+
+def _category_label(entity: dict[str, Any], fallback: str = "") -> str:
+    """Venue type for the UI. Occasion tags like Birthday are not a type of place."""
+    names = [
+        label
+        for t in (entity.get("tags") or [])
+        if (label := _tag_label(t)) and _is_useful_tag(label)
+    ]
+    picked = best_venue_label(names)
+    if not picked:
+        inferred = kind_from_name(str(entity.get("name") or ""))
+        picked = inferred[:1].upper() + inferred[1:] if inferred else ""
+    if picked:
+        return picked
     props = entity.get("properties") or {}
     if isinstance(props, dict) and props.get("business_type"):
-        return str(props["business_type"])
+        business = str(props["business_type"])
+        if venue_rank(business):
+            return business
     return fallback
 
 

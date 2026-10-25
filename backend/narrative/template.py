@@ -6,7 +6,7 @@ import re
 from typing import Optional
 
 from models import AnchorResolution, ItineraryRequest
-from qloo.places import PlaceCandidate, _is_useful_tag
+from qloo.places import PlaceCandidate, _is_useful_tag, best_venue_label, kind_from_name, venue_rank
 
 _OPENERS = {
     "MORNING": "Start your morning at {name}",
@@ -107,30 +107,91 @@ def _descriptor_tag_score(tag: str) -> float:
             "cultural",
             "vinyl",
             "indie",
+            "cocktail",
+            "wine",
+            "coffee",
+            "ramen",
+            "beer",
         )
     ):
         score += 4.0
     return score
 
 
+_PLURALS = {
+    "cocktails": "cocktail",
+    "bars": "bar",
+    "cafes": "cafe",
+    "museums": "museum",
+    "galleries": "gallery",
+    "restaurants": "restaurant",
+    "clubs": "club",
+    "pubs": "pub",
+    "lounges": "lounge",
+}
+
+
+def _plain(tag: str) -> str:
+    word = tag.strip().lower()
+    return _PLURALS.get(word, word)
+
+
+def _with_article(phrase: str) -> str:
+    phrase = phrase.strip()
+    if not phrase:
+        return ""
+    article = "an" if phrase[0].lower() in "aeiou" else "a"
+    return f"{article} {phrase}"
+
+
+def _candidate_labels(place: PlaceCandidate) -> list[str]:
+    labels: list[str] = []
+    if place.category:
+        labels.append(place.category)
+    labels.extend(place.tags)
+    seen: set[str] = set()
+    out: list[str] = []
+    for label in labels:
+        key = label.strip().lower()
+        if not key or key in seen or not _is_useful_tag(label):
+            continue
+        seen.add(key)
+        out.append(label.strip())
+    return out
+
+
+def _venue_kind(place: PlaceCandidate) -> str:
+    label = best_venue_label(_candidate_labels(place))
+    if label:
+        return _plain(label)
+    return kind_from_name(place.name)
+
+
+def _quality_word(place: PlaceCandidate, kind: str) -> str:
+    labels = [t for t in place.tags if _is_useful_tag(t) and _descriptor_tag_score(t) > 2]
+    labels.sort(key=_descriptor_tag_score, reverse=True)
+    kind_l = kind.lower()
+    for label in labels:
+        if venue_rank(label):
+            continue
+        word = _plain(label)
+        if not word or word in kind_l:
+            continue
+        return word
+    return ""
+
+
 def _descriptor(place: PlaceCandidate) -> str:
-    clean = [t for t in place.tags if _is_useful_tag(t)]
-    clean.sort(key=_descriptor_tag_score, reverse=True)
-    clean = [t for t in clean if _descriptor_tag_score(t) > -5]
-
-    if place.category and _is_useful_tag(place.category):
-        cat = place.category.lower()
-        if clean and _descriptor_tag_score(clean[0]) > 2:
-            return f"a {cat} with a {clean[0].lower()} feel"
-        return f"a {cat}"
-
-    if not clean:
-        return "a local spot"
-    if len(clean) == 1:
-        return f"a {clean[0].lower()} spot"
-    if _descriptor_tag_score(clean[1]) > 0:
-        return f"a {clean[0].lower()} spot with a {clean[1].lower()} feel"
-    return f"a {clean[0].lower()} spot"
+    """A grammatical kind of place, or "" when the only tags are junk."""
+    kind = _venue_kind(place)
+    quality = _quality_word(place, kind)
+    if kind and quality:
+        return _with_article(f"{quality} {kind}")
+    if kind:
+        return _with_article(kind)
+    if quality:
+        return _with_article(f"{quality} spot")
+    return ""
 
 
 def _influence_sentence(
@@ -145,51 +206,27 @@ def _influence_sentence(
 
     if strong:
         templates = [
-            (
-                "Qloo's taste graph ranked it highly for fans of {anchor}: "
-                "a cross-domain match, not a generic list."
-            ),
-            (
-                "Your taste signal for {anchor} is what pushed this venue up "
-                "in Qloo's insights for this part of the day."
-            ),
-            (
-                "Qloo connected {anchor} to places with this character; "
-                "this one landed near the top of that cluster."
-            ),
-            (
-                "Fans of {anchor} tend to overlap with spots like this in "
-                "Qloo's cultural graph. That's why it's here."
-            ),
+            "People who like {anchor} often start the day in a place like this.",
+            "A taste for {anchor} is what pulled it into the afternoon.",
+            "Fans of {anchor} tend to spend the evening somewhere with this feel.",
+            "People drawn to {anchor} tend to end the night in a room like this.",
         ]
         return templates[idx % len(templates)].format(anchor=anchor)
 
     if score is not None or place.influenced_by:
         templates = [
-            (
-                "It surfaced because Qloo mapped your interest in {anchor} "
-                "onto real venues in the city."
-            ),
-            (
-                "{anchor} was one of the taste inputs Qloo used when "
-                "filtering recommendations for this stop."
-            ),
-            (
-                "Qloo's entity signals included {anchor}; this place fit "
-                "that slice of your profile."
-            ),
-            (
-                "This pick reflects how {anchor} reads in Qloo's graph: "
-                "similar audiences, similar spaces."
-            ),
+            "It fits the morning because it lines up with {anchor}.",
+            "It fits the afternoon because it lines up with {anchor}.",
+            "It fits the evening because it lines up with {anchor}.",
+            "It fits the night because it lines up with {anchor}.",
         ]
         return templates[idx % len(templates)].format(anchor=anchor)
 
     templates = [
-        f"Matched to {anchors} via Qloo's cross-domain taste data.",
-        f"Qloo used your anchors ({anchors}) to shape this leg of the day.",
-        f"Chosen from taste signals around {anchors}, not a static travel list.",
-        f"Grounded in Qloo insights tied to {anchors}.",
+        f"The morning stop follows what you said you like: {anchors}.",
+        f"The afternoon stop follows what you said you like: {anchors}.",
+        f"The evening stop follows what you said you like: {anchors}.",
+        f"The night stop follows what you said you like: {anchors}.",
     ]
     return templates[idx % len(templates)]
 
@@ -203,12 +240,12 @@ def narrative_for_place(
 ) -> str:
     opener_tmpl = _OPENERS.get(phase.upper(), f"{phase.title()} at {{name}}")
     opener = opener_tmpl.format(name=place.name)
-    descriptor = _descriptor(place)
-    influence = _influence_sentence(
+    phrase = _descriptor(place)
+    lead = f"{opener}, {phrase}." if phrase else f"{opener}."
+    why = _influence_sentence(
         phase, place, resolutions, _anchor_phrase(resolutions)
     )
-    desc = descriptor[0].upper() + descriptor[1:] if descriptor else descriptor
-    return f"{opener}. {desc}. {influence}"
+    return f"{lead} {why}"
 
 
 def narrative_for_fallback(

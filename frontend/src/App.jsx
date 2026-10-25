@@ -1,33 +1,71 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useReducedMotion } from 'motion/react';
 import { ReactLenis, useLenis } from 'lenis/react';
 import CityMapPicker from './components/CityMapPicker';
+import IntroTitle from './components/IntroTitle';
 import CityLogoGrid from './components/CityLogoGrid';
+import CyclingPromptField from './components/CyclingPromptField';
+import CrossfadeAtmosphere from './components/CrossfadeAtmosphere';
+import ItineraryCarousel from './components/ItineraryCarousel';
+import WoodgrainAtmosphere from './components/WoodgrainAtmosphere';
+import VibeOutputDissolve from './components/VibeOutputDissolve';
 import { generateItinerary } from './api';
 
-function ParallaxLayer({ speed = 0.15, className = '', children }) {
-  const ref = useRef(null);
+const UNRECOGNIZED_ANCHORS =
+  "Those entries don't match an artist, film, or mood, so there's no day to build. Try a real name, like Radiohead or Studio Ghibli.";
 
-  useLenis(({ scroll }) => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      el.style.transform = 'none';
-      return;
-    }
-    el.style.transform = `translate3d(0, ${scroll * speed * -0.08}px, 0)`;
-  });
+const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+const SHORT_ROW_WORDS = new Set(['sad', 'dad', 'pop']);
 
-  return (
-    <div ref={ref} className={className} data-scroll-speed={speed}>
-      {children}
-    </div>
-  );
+function sameRowCluster(compact) {
+  if (compact.length < 3 || !/^[a-z]+$/.test(compact)) return false;
+  if (SHORT_ROW_WORDS.has(compact)) return false;
+  if (compact.length === 4 && compact.slice(0, 2) === compact.slice(2)) return false;
+  const cols = [];
+  let row = null;
+  for (const ch of compact) {
+    let found = null;
+    KEYBOARD_ROWS.forEach((keys, rowIndex) => {
+      const col = keys.indexOf(ch);
+      if (col >= 0) found = [col, rowIndex];
+    });
+    if (!found) return false;
+    const [col, rowIndex] = found;
+    if (row === null) row = rowIndex;
+    else if (rowIndex !== row) return false;
+    cols.push(col);
+  }
+  return Math.max(...cols) - Math.min(...cols) <= 2;
 }
 
-function SectionLabel({ step, children }) {
+function looksLikeGibberish(text) {
+  const compact = text.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
+  if (compact.length < 2) return true;
+  if (compact.length >= 4 && new Set(compact).size === 1) return true;
+  for (let size = 1; size <= Math.floor(compact.length / 2); size += 1) {
+    if (compact.length % size !== 0) continue;
+    const reps = compact.length / size;
+    if (compact.slice(0, size).repeat(reps) !== compact) continue;
+    if ((size >= 3 && reps >= 2) || reps >= 3) return true;
+  }
+  if (
+    compact.length >= 4 &&
+    KEYBOARD_ROWS.some((row) => row.includes(compact) || [...row].reverse().join('').includes(compact))
+  ) {
+    return true;
+  }
+  return sameRowCluster(compact);
+}
+
+function SectionLabel({ step, children, tone = 'light' }) {
+  const muted = tone === 'dark' ? 'text-[var(--ink-muted)]' : 'text-[var(--color-fg)]/40';
+  const ring =
+    tone === 'dark'
+      ? 'border-[var(--ink)]/25 text-[var(--ink)]/70'
+      : 'border-[var(--color-fg)]/20 text-[var(--color-fg)]/70';
   return (
-    <p className="mb-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-[10px] text-white/70">
+    <p className={`mb-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${muted}`}>
+      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[10px] ${ring}`}>
         {step}
       </span>
       {children}
@@ -46,8 +84,10 @@ function AppShell() {
   const [loadingTextIndex, setLoadingTextIndex] = useState(0);
   const [itinerary, setItinerary] = useState(null);
   const [validationError, setValidationError] = useState(false);
+  const [anchorError, setAnchorError] = useState('');
   const [apiError, setApiError] = useState(false);
   const lenis = useLenis();
+  const reduceMotion = useReducedMotion();
 
   const loadingPhrases = [
     'Analyzing your taste…',
@@ -69,20 +109,41 @@ function AppShell() {
   }, [isLoading]);
 
   useEffect(() => {
-    if ((itinerary || isLoading || apiError) && lenis) {
-      lenis.scrollTo('#output', { offset: -24 });
-    }
-  }, [itinerary, isLoading, apiError, lenis]);
+    if (!lenis) return;
+    lenis.resize();
+    if (!itinerary || isLoading) return undefined;
+    const timer = window.setTimeout(() => {
+      lenis.resize();
+      const target = document.getElementById('output');
+      if (!target) return;
+      lenis.scrollTo(target, {
+        offset: 0,
+        duration: reduceMotion ? 0.2 : 1.85,
+        easing: (t) => 1 - (1 - t) ** 3,
+      });
+    }, reduceMotion ? 0 : 120);
+    return () => window.clearTimeout(timer);
+  }, [itinerary, isLoading, lenis, reduceMotion]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setValidationError(false);
+    setAnchorError('');
     setApiError(false);
     setItinerary(null);
 
-    if (!formData.music && !formData.film && !formData.vibe) {
+    const filled = [formData.music, formData.film, formData.vibe]
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (filled.length === 0) {
       setValidationError(true);
-      lenis?.scrollTo('#vibe', { offset: -24 });
+      lenis?.scrollTo('#vibe');
+      return;
+    }
+    if (filled.every(looksLikeGibberish)) {
+      setAnchorError(UNRECOGNIZED_ANCHORS);
+      lenis?.scrollTo('#vibe');
       return;
     }
     if (!formData.city) {
@@ -92,7 +153,6 @@ function AppShell() {
     }
 
     setIsLoading(true);
-    lenis?.scrollTo('#output', { offset: -24 });
 
     try {
       const data = await generateItinerary(formData);
@@ -102,6 +162,19 @@ function AppShell() {
       }, 4500);
     } catch (error) {
       console.error('Error fetching itinerary:', error);
+      const detail = error.body?.detail;
+      const unrecognized =
+        error.status === 422 &&
+        detail &&
+        typeof detail === 'object' &&
+        !Array.isArray(detail) &&
+        detail.code === 'unrecognized_anchors';
+      if (unrecognized) {
+        setAnchorError(detail.message || UNRECOGNIZED_ANCHORS);
+        setIsLoading(false);
+        lenis?.scrollTo('#vibe');
+        return;
+      }
       setTimeout(() => {
         setApiError(true);
         setIsLoading(false);
@@ -110,18 +183,28 @@ function AppShell() {
   };
 
   const resetOutput = () => {
-    setItinerary(null);
     setApiError(false);
     setIsLoading(false);
-    lenis?.scrollTo('#vibe', { offset: -24 });
+    if (!lenis) return;
+    const target = document.getElementById('vibe-start') || document.getElementById('vibe');
+    if (!target) return;
+    lenis.resize();
+    window.requestAnimationFrame(() => {
+      lenis.scrollTo(target, {
+        offset: 0,
+        duration: reduceMotion ? 0.2 : 1.85,
+        easing: (t) => 1 - (1 - t) ** 3,
+        lock: true,
+      });
+    });
   };
 
-  const hasOutput = isLoading || apiError || itinerary;
+  const hasOutput = Boolean(itinerary);
 
   return (
     <div className="bg-[var(--color-bg)] text-[var(--color-fg)]">
-      {/* ── 1. City chooser ───────────────────────────────────────── */}
-      <section id="city" className="relative" aria-label="Choose a city">
+      {/* ── 1. Title, then the city map it dissolves into ─────────── */}
+      <IntroTitle>
         <CityMapPicker
           hero
           value={formData.city}
@@ -130,7 +213,7 @@ function AppShell() {
             setValidationError(false);
           }}
         />
-      </section>
+      </IntroTitle>
 
       {/* Cities logo grid — On the Grid #cities pattern */}
       <CityLogoGrid
@@ -138,245 +221,134 @@ function AppShell() {
         onChange={(city) => {
           setFormData({ ...formData, city });
           setValidationError(false);
-          lenis?.scrollTo('#vibe', { offset: -24 });
+          lenis?.scrollTo('#vibe');
         }}
       />
 
       <form onSubmit={handleSubmit}>
-        {/* ── 2. Vibe input ─────────────────────────────────────────── */}
-        <section
-          id="vibe"
-          className="relative border-t border-[var(--color-border)] px-6 py-20 md:px-10 md:py-28"
-          aria-labelledby="vibe-heading"
-        >
-          <ParallaxLayer
-            speed={0.35}
-            className="pointer-events-none absolute -left-10 top-10 h-64 w-64 rounded-full bg-[var(--color-accent-soft)] blur-3xl"
-          />
-          <ParallaxLayer
-            speed={0.55}
-            className="pointer-events-none absolute -right-16 bottom-0 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl"
-          />
-
-          <div className="relative mx-auto max-w-2xl">
-            <SectionLabel step="2">Set your vibe</SectionLabel>
-            <h2
-              id="vibe-heading"
-              className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-[-0.03em] text-white"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              Your cultural anchors
-            </h2>
-            <p className="mt-3 max-w-xl text-[var(--color-muted)]">
-              Tell Qloo what you love. We cross music, film, and vibe into a day that feels like you
-              in {formData.city || 'your city'}.
-            </p>
-
-            {validationError && (
-              <div
-                role="alert"
-                className="mt-6 rounded-xl border border-red-500/30 bg-red-950/40 px-4 py-3 text-sm text-red-200"
+        <VibeOutputDissolve
+          active={hasOutput}
+          atmosphere={<CrossfadeAtmosphere />}
+          reveal={
+            hasOutput ? (
+              <section
+                id={reduceMotion ? 'output' : undefined}
+                className={`output-section isolate flex flex-col justify-center py-10 md:py-12 ${
+                  reduceMotion
+                    ? 'relative min-h-svh overflow-hidden'
+                    : 'sticky top-0 z-0 h-svh overflow-hidden'
+                }`}
+                aria-labelledby="output-heading"
+                aria-live="polite"
               >
-                Choose a city on the map and enter at least one cultural anchor.
-              </div>
-            )}
-
-            <div className="mt-10 space-y-8">
-              <div>
-                <label
-                  htmlFor="music"
-                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40"
-                >
-                  Favorite music
-                </label>
-                <input
-                  id="music"
-                  type="text"
-                  placeholder="Radiohead, Daft Punk…"
-                  className={`w-full border-b bg-transparent pb-3 text-lg transition-colors duration-200 placeholder:text-white/25 focus:outline-none ${
-                    validationError
-                      ? 'border-red-500'
-                      : 'border-white/15 focus:border-white'
-                  }`}
-                  value={formData.music}
-                  onChange={(e) => {
-                    setFormData({ ...formData, music: e.target.value });
-                    setValidationError(false);
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="film"
-                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40"
-                >
-                  Favorite film or director
-                </label>
-                <input
-                  id="film"
-                  type="text"
-                  placeholder="Studio Ghibli, Wes Anderson…"
-                  className={`w-full border-b bg-transparent pb-3 text-lg transition-colors duration-200 placeholder:text-white/25 focus:outline-none ${
-                    validationError
-                      ? 'border-red-500'
-                      : 'border-white/15 focus:border-white'
-                  }`}
-                  value={formData.film}
-                  onChange={(e) => {
-                    setFormData({ ...formData, film: e.target.value });
-                    setValidationError(false);
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="vibe-input"
-                  className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40"
-                >
-                  Desired vibe
-                </label>
-                <input
-                  id="vibe-input"
-                  type="text"
-                  placeholder="Cyberpunk neon, cozy lo-fi…"
-                  className={`w-full border-b bg-transparent pb-3 text-lg transition-colors duration-200 placeholder:text-white/25 focus:outline-none ${
-                    validationError
-                      ? 'border-red-500'
-                      : 'border-white/15 focus:border-white'
-                  }`}
-                  value={formData.vibe}
-                  onChange={(e) => {
-                    setFormData({ ...formData, vibe: e.target.value });
-                    setValidationError(false);
-                  }}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="mt-12 cursor-pointer rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-transform duration-200 hover:scale-[0.98] hover:bg-slate-100 active:scale-[0.96] disabled:cursor-wait disabled:opacity-60"
-            >
-              {isLoading ? 'Generating…' : 'Generate my day'}
-            </button>
-          </div>
-        </section>
-      </form>
-
-      {/* ── 3. Output ─────────────────────────────────────────────── */}
-      <section
-        id="output"
-        className="relative min-h-[70svh] border-t border-[var(--color-border)] px-6 py-20 md:px-10 md:py-28"
-        aria-labelledby="output-heading"
-        aria-live="polite"
-      >
-        <div className="mx-auto max-w-2xl">
-          <SectionLabel step="3">Your day</SectionLabel>
-
-          {!hasOutput && (
-            <div className="mt-2">
-              <h2
-                id="output-heading"
-                className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-[-0.03em] text-white"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Your itinerary appears here
-              </h2>
-              <p className="mt-3 max-w-lg text-[var(--color-muted)]">
-                Pick a city, set your anchors, then generate. This section fills with a day shaped
-                around your taste.
-              </p>
-              <div className="mt-12 space-y-6 opacity-40" aria-hidden>
-                {['Morning', 'Afternoon', 'Evening'].map((phase) => (
-                  <div key={phase} className="border-l border-white/20 pl-6">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">
-                      {phase}
-                    </p>
-                    <div className="mt-2 h-3 w-2/3 rounded bg-white/10" />
-                    <div className="mt-3 h-16 w-full rounded-r-xl bg-white/5" />
+                <WoodgrainAtmosphere />
+                <div className="relative z-10">
+                  <div className="mx-auto max-w-2xl px-6 md:px-10">
+                    <SectionLabel step="3" tone="dark">
+                      Your day
+                    </SectionLabel>
                   </div>
-                ))}
-              </div>
+                  <ItineraryCarousel itinerary={itinerary} onReset={resetOutput} />
+                </div>
+              </section>
+            ) : null
+          }
+        >
+          <SectionLabel step="2">Set your vibe</SectionLabel>
+          <h2
+            id="vibe-heading"
+            className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-[-0.03em] text-[var(--color-fg)]"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Your cultural anchors
+          </h2>
+          <p className="mt-3 max-w-xl text-[var(--color-muted)]">
+            Tell Qloo what you love. We cross music, film, and vibe into a day that feels like you
+            in {formData.city || 'your city'}.
+          </p>
+
+          {validationError && (
+            <div
+              role="alert"
+              className="mt-6 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger-fg)]"
+            >
+              Choose a city on the map and enter at least one cultural anchor.
+            </div>
+          )}
+          {anchorError && (
+            <div
+              role="alert"
+              className="mt-6 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger-fg)]"
+            >
+              {anchorError}
             </div>
           )}
 
+          <div className="mt-10 space-y-4">
+            <CyclingPromptField
+              id="music"
+              leadIn="Favorite music is…"
+              examples={['Radiohead', 'Daft Punk', 'Bon Iver', 'Tame Impala']}
+              value={formData.music}
+              error={validationError}
+              onChange={(e) => {
+                setFormData({ ...formData, music: e.target.value });
+                setValidationError(false);
+                setAnchorError('');
+              }}
+            />
+            <CyclingPromptField
+              id="film"
+              leadIn="Favorite film or director is…"
+              examples={['Studio Ghibli', 'Wes Anderson', 'Blade Runner', 'Christopher Nolan']}
+              value={formData.film}
+              error={validationError}
+              onChange={(e) => {
+                setFormData({ ...formData, film: e.target.value });
+                setValidationError(false);
+                setAnchorError('');
+              }}
+            />
+            <CyclingPromptField
+              id="vibe-input"
+              leadIn="Today I want to feel…"
+              examples={[
+                'cyberpunk neon',
+                'cozy lo-fi',
+                'golden hour calm',
+                'brutalist and bold',
+              ]}
+              value={formData.vibe}
+              error={validationError}
+              onChange={(e) => {
+                setFormData({ ...formData, vibe: e.target.value });
+                setValidationError(false);
+                setAnchorError('');
+              }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="mt-12 cursor-pointer rounded-full bg-[var(--silk-beige)] px-8 py-3.5 text-sm font-semibold text-[var(--ink)] transition-transform duration-200 hover:scale-[0.98] hover:bg-[color-mix(in_oklch,var(--silk-beige)_88%,var(--antique-gold))] active:scale-[0.96] disabled:cursor-wait disabled:opacity-60"
+          >
+            {isLoading ? 'Generating…' : 'Generate my day'}
+          </button>
           {isLoading && (
-            <div className="flex min-h-[40svh] flex-col items-center justify-center gap-6">
-              <div
-                className="h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-white"
-                aria-hidden
-              />
-              <p className="text-lg tracking-wide text-white/80">
-                {loadingPhrases[loadingTextIndex]}
-              </p>
-            </div>
+            <p className="mt-4 text-sm tracking-wide text-[var(--color-fg)]/70">{loadingPhrases[loadingTextIndex]}</p>
           )}
-
           {apiError && !isLoading && (
-            <div className="flex min-h-[40svh] flex-col items-start justify-center gap-6">
-              <h2
-                id="output-heading"
-                className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-[-0.03em] text-white"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Vibe check failed
-              </h2>
-              <p className="max-w-md text-[var(--color-muted)]">
-                The city might be quiet right now, or the API needs a moment. Adjust your anchors and
-                try again.
-              </p>
-              <button
-                type="button"
-                onClick={resetOutput}
-                className="cursor-pointer rounded-full border border-white/25 px-6 py-2 text-sm text-white/90 transition-colors duration-200 hover:border-white hover:text-white"
-              >
-                Back to vibe
-              </button>
+            <div
+              role="alert"
+              className="mt-6 max-w-md rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger-fg)]"
+            >
+              The city might be quiet right now, or the API needs a moment. Adjust your anchors
+              and try again.
             </div>
           )}
-
-          {itinerary && !isLoading && (
-            <div>
-              <h2
-                id="output-heading"
-                className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-[-0.03em] text-white"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Your vibe in {itinerary.city}
-              </h2>
-              {itinerary.is_fallback && (
-                <p className="mt-4 text-sm text-amber-300/90">
-                  Showing a fallback day. Live Qloo recommendations were unavailable for this run.
-                </p>
-              )}
-              <div className="relative ml-3 mt-14 space-y-12 border-l border-white/15 pb-8">
-                {itinerary.stops.map((stop, idx) => (
-                  <article key={idx} className="relative pl-8">
-                    <div className="absolute top-1.5 -left-[5px] h-2.5 w-2.5 rounded-full bg-white" />
-                    <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white/40">
-                      {stop.phase}
-                    </p>
-                    <h3 className="mb-3 text-xl font-semibold text-white">{stop.venue}</h3>
-                    <blockquote className="rounded-r-xl bg-[#121a2b] p-4 text-sm leading-relaxed text-white/75 italic">
-                      {stop.vibe_narrative}
-                    </blockquote>
-                  </article>
-                ))}
-              </div>
-              <div className="mt-14">
-                <button
-                  type="button"
-                  onClick={resetOutput}
-                  className="cursor-pointer rounded-full border border-white/25 px-6 py-2 text-sm text-white/70 transition-colors duration-200 hover:border-white hover:text-white"
-                >
-                  Tweak vibe & regenerate
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+        </VibeOutputDissolve>
+      </form>
     </div>
   );
 }

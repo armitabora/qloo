@@ -4,7 +4,7 @@ import CityIcon from './cityIcons';
 
 /**
  * Cities logo grid — layout mirrored from On the Grid (#cities):
- * navy field, white hairline grid, name + country, centered line-art mark,
+ * emerald field, silk-beige hairline grid, name + country, centered line-art mark,
  * hover invert. Evidence: onthegrid.city#cities REA capture.
  */
 export default function CityLogoGrid({ value, onChange }) {
@@ -36,7 +36,7 @@ export default function CityLogoGrid({ value, onChange }) {
 
   if (loading) {
     return (
-      <div className="bg-[#07111f] px-6 py-16 text-center text-sm text-white/50">
+      <div className="bg-[var(--color-bg)] px-6 py-16 text-center text-sm text-[var(--color-fg)]/50">
         Loading cities…
       </div>
     );
@@ -44,7 +44,7 @@ export default function CityLogoGrid({ value, onChange }) {
 
   if (loadError) {
     return (
-      <div className="border-t border-white/15 bg-[#07111f] px-6 py-10 text-center text-sm text-red-200">
+      <div className="border-t border-[var(--color-fg)]/15 bg-[var(--color-bg)] px-6 py-10 text-center text-sm text-[var(--color-danger-fg)]">
         Could not load cities.
       </div>
     );
@@ -54,10 +54,10 @@ export default function CityLogoGrid({ value, onChange }) {
     <section
       id="cities"
       aria-label="Cities"
-      className="border-t border-white/20 bg-[#07111f] text-white"
+      className="border-t border-[var(--color-fg)]/20 bg-[var(--color-bg)] text-[var(--color-fg)]"
     >
-      <div className="border-b border-white/20 px-5 py-5 md:px-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
+      <div className="border-b border-[var(--color-fg)]/20 px-5 py-5 md:px-8">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-fg)]/45">
           Cities
         </p>
         <h2
@@ -77,28 +77,28 @@ export default function CityLogoGrid({ value, onChange }) {
               type="button"
               onClick={() => onChange(city.id)}
               aria-pressed={selected}
-              className={`group relative flex aspect-[4/5] cursor-pointer flex-col items-center overflow-hidden border-r border-b border-white/30 px-3 py-5 text-center transition-colors duration-200 ${
+              className={`group relative flex aspect-square cursor-pointer flex-col items-center overflow-hidden border-r border-b border-[var(--color-fg)]/30 px-2.5 py-3 text-center transition-colors duration-200 ${
                 selected
-                  ? 'bg-white text-[#07111f]'
-                  : 'bg-[#07111f] text-white hover:bg-white hover:text-[#07111f]'
+                  ? 'bg-[var(--silk-beige)] text-[var(--ink)]'
+                  : 'bg-[var(--color-bg)] text-[var(--color-fg)] hover:bg-[var(--silk-beige)] hover:text-[var(--ink)]'
               }`}
             >
               <div className="relative z-10 w-full px-1">
                 <h3
-                  className="text-[clamp(1.2rem,2.4vw,1.75rem)] font-bold leading-[1.05] tracking-[-0.02em]"
+                  className="text-[clamp(1rem,2vw,1.45rem)] font-bold leading-[1.05] tracking-[-0.02em]"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
                   {city.label}
                 </h3>
-                <p className="mt-1.5 text-[11px] leading-snug opacity-70">
+                <p className="mt-0.5 text-[10px] leading-snug opacity-70">
                   {city.country}
                 </p>
               </div>
 
-              <div className="relative z-10 flex flex-1 items-center justify-center py-3">
+              <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
                 <CityIcon
                   id={city.id}
-                  className={`h-28 w-28 max-h-[46%] max-w-[72%] transition-transform duration-200 md:h-32 md:w-32 ${
+                  className={`h-[7.5rem] w-[7.5rem] max-h-[58%] max-w-[70%] transition-transform duration-200 ${
                     selected ? 'scale-105' : 'group-hover:scale-105'
                   }`}
                 />

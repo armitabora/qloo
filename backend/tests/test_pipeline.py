@@ -124,6 +124,40 @@ async def test_all_anchors_unresolved_raises(settings: Settings):
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_nonsense_anchors_do_not_generate_a_day(settings: Settings):
+    """Home-row mash must not generate a day, even when Qloo has an exact name."""
+    search = respx.get(f"{BASE}/search").mock(
+        return_value=httpx.Response(200, json=search_film("Sada", "ent-sada"))
+    )
+    tags = respx.get(f"{BASE}/v2/tags").mock(
+        return_value=httpx.Response(
+            200,
+            json={"results": {"tags": [{"id": "urn:tag:genre:movie:sada", "name": "Sada"}]}},
+        )
+    )
+    insights = respx.get(f"{BASE}/v2/insights").mock(
+        return_value=httpx.Response(200, json=insights_places([place_entity(entity_id="p", name="BAR Zolddich")]))
+    )
+    settings_local = Settings(
+        qloo_api_key="test-qloo-key",
+        qloo_base_url=BASE,
+        gemini_api_key="",
+        qloo_cache_ttl_seconds=0,
+        qloo_max_retries=0,
+    )
+    async with QlooClient(settings=settings_local) as client:
+        with pytest.raises(NoAnchorsResolvedError):
+            await generate_itinerary(
+                ItineraryRequest(city="Chicago", music="sdasd", film="sada", vibe="asda"),
+                client=client,
+            )
+    assert insights.call_count == 0
+    assert search.call_count == 0
+    assert tags.call_count == 0
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_qloo_down_uses_fallback(settings: Settings):
     _mock_tags(respx)
     respx.get(f"{BASE}/search").mock(

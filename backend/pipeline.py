@@ -25,11 +25,17 @@ from services.fallback_data import degraded_fallback_slots, get_fallback_itinera
 logger = logging.getLogger("vibe.pipeline")
 
 
+UNRECOGNIZED_ANCHORS = (
+    "Those entries don't match an artist, film, or mood, so there's no day to build. "
+    "Try a real name, like Radiohead or Studio Ghibli."
+)
+
+
 class NoAnchorsResolvedError(Exception):
     """Raised when every cultural anchor fails to resolve."""
 
     def __init__(self, resolutions: list[AnchorResolution]):
-        super().__init__("None of the cultural anchors could be resolved in Qloo.")
+        super().__init__(UNRECOGNIZED_ANCHORS)
         self.resolutions = resolutions
 
 

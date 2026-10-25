@@ -14,6 +14,17 @@ export async function generateItinerary(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error('API failed');
+  if (!res.ok) {
+    let body = null;
+    try {
+      body = await res.json();
+    } catch {
+      body = null;
+    }
+    const error = new Error('API failed');
+    error.status = res.status;
+    error.body = body;
+    throw error;
+  }
   return res.json();
 }
