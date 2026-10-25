@@ -31,7 +31,7 @@ class ItineraryRequest(BaseModel):
             )
         if self.city not in CITY_REGISTRY:
             raise ValueError(
-                f"City must be one of: {', '.join(CITY_REGISTRY.keys())}."
+                f"Unknown city {self.city!r}. See GET /api/cities for supported destinations."
             )
         return self
 
@@ -122,6 +122,27 @@ class HealthResponse(BaseModel):
     qloo_configured: bool = False
     gemini_configured: bool = False
     cities: list[str] = Field(default_factory=list)
+
+
+class CityOption(BaseModel):
+    id: str
+    label: str
+    location_query: str
+    region: str
+    country: str
+    lat: float
+    lng: float
+    aliases: list[str] = Field(default_factory=list)
+
+
+class RegionMeta(BaseModel):
+    id: str
+    label: str
+
+
+class CitiesResponse(BaseModel):
+    cities: list[CityOption]
+    regions: list[RegionMeta] = Field(default_factory=list)
 
 
 class ErrorBody(BaseModel):

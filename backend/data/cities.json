@@ -1,0 +1,302 @@
+[
+  {
+    "id": "New York",
+    "label": "New York",
+    "location_query": "New York City",
+    "region": "us",
+    "country": "United States",
+    "lat": 40.71,
+    "lng": -74.01,
+    "aliases": ["NYC", "New York City"]
+  },
+  {
+    "id": "Los Angeles",
+    "label": "Los Angeles",
+    "location_query": "Los Angeles",
+    "region": "us",
+    "country": "United States",
+    "lat": 34.05,
+    "lng": -118.24,
+    "aliases": ["LA", "L.A."]
+  },
+  {
+    "id": "San Francisco",
+    "label": "San Francisco",
+    "location_query": "San Francisco",
+    "region": "us",
+    "country": "United States",
+    "lat": 37.77,
+    "lng": -122.42,
+    "aliases": ["SF", "Bay Area"]
+  },
+  {
+    "id": "Chicago",
+    "label": "Chicago",
+    "location_query": "Chicago",
+    "region": "us",
+    "country": "United States",
+    "lat": 41.88,
+    "lng": -87.63,
+    "aliases": []
+  },
+  {
+    "id": "Austin",
+    "label": "Austin",
+    "location_query": "Austin, Texas",
+    "region": "us",
+    "country": "United States",
+    "lat": 30.27,
+    "lng": -97.74,
+    "aliases": []
+  },
+  {
+    "id": "Miami",
+    "label": "Miami",
+    "location_query": "Miami",
+    "region": "us",
+    "country": "United States",
+    "lat": 25.76,
+    "lng": -80.19,
+    "aliases": []
+  },
+  {
+    "id": "Seattle",
+    "label": "Seattle",
+    "location_query": "Seattle",
+    "region": "us",
+    "country": "United States",
+    "lat": 47.61,
+    "lng": -122.33,
+    "aliases": []
+  },
+  {
+    "id": "Boston",
+    "label": "Boston",
+    "location_query": "Boston",
+    "region": "us",
+    "country": "United States",
+    "lat": 42.36,
+    "lng": -71.06,
+    "aliases": []
+  },
+  {
+    "id": "London",
+    "label": "London",
+    "location_query": "London, UK",
+    "region": "europe",
+    "country": "United Kingdom",
+    "lat": 51.51,
+    "lng": -0.13,
+    "aliases": []
+  },
+  {
+    "id": "Paris",
+    "label": "Paris",
+    "location_query": "Paris, France",
+    "region": "europe",
+    "country": "France",
+    "lat": 48.86,
+    "lng": 2.35,
+    "aliases": []
+  },
+  {
+    "id": "Berlin",
+    "label": "Berlin",
+    "location_query": "Berlin",
+    "region": "europe",
+    "country": "Germany",
+    "lat": 52.52,
+    "lng": 13.41,
+    "aliases": []
+  },
+  {
+    "id": "Amsterdam",
+    "label": "Amsterdam",
+    "location_query": "Amsterdam",
+    "region": "europe",
+    "country": "Netherlands",
+    "lat": 52.37,
+    "lng": 4.9,
+    "aliases": []
+  },
+  {
+    "id": "Barcelona",
+    "label": "Barcelona",
+    "location_query": "Barcelona",
+    "region": "europe",
+    "country": "Spain",
+    "lat": 41.39,
+    "lng": 2.17,
+    "aliases": []
+  },
+  {
+    "id": "Rome",
+    "label": "Rome",
+    "location_query": "Rome, Italy",
+    "region": "europe",
+    "country": "Italy",
+    "lat": 41.9,
+    "lng": 12.5,
+    "aliases": ["Roma"]
+  },
+  {
+    "id": "Lisbon",
+    "label": "Lisbon",
+    "location_query": "Lisbon",
+    "region": "europe",
+    "country": "Portugal",
+    "lat": 38.72,
+    "lng": -9.14,
+    "aliases": ["Lisboa"]
+  },
+  {
+    "id": "Dublin",
+    "label": "Dublin",
+    "location_query": "Dublin, Ireland",
+    "region": "europe",
+    "country": "Ireland",
+    "lat": 53.35,
+    "lng": -6.26,
+    "aliases": []
+  },
+  {
+    "id": "Tokyo",
+    "label": "Tokyo",
+    "location_query": "Tokyo",
+    "region": "asia",
+    "country": "Japan",
+    "lat": 35.68,
+    "lng": 139.69,
+    "aliases": []
+  },
+  {
+    "id": "Osaka",
+    "label": "Osaka",
+    "location_query": "Osaka",
+    "region": "asia",
+    "country": "Japan",
+    "lat": 34.69,
+    "lng": 135.5,
+    "aliases": []
+  },
+  {
+    "id": "Seoul",
+    "label": "Seoul",
+    "location_query": "Seoul",
+    "region": "asia",
+    "country": "South Korea",
+    "lat": 37.57,
+    "lng": 126.98,
+    "aliases": []
+  },
+  {
+    "id": "Singapore",
+    "label": "Singapore",
+    "location_query": "Singapore",
+    "region": "asia",
+    "country": "Singapore",
+    "lat": 1.35,
+    "lng": 103.82,
+    "aliases": []
+  },
+  {
+    "id": "Bangkok",
+    "label": "Bangkok",
+    "location_query": "Bangkok",
+    "region": "asia",
+    "country": "Thailand",
+    "lat": 13.76,
+    "lng": 100.5,
+    "aliases": []
+  },
+  {
+    "id": "Hong Kong",
+    "label": "Hong Kong",
+    "location_query": "Hong Kong",
+    "region": "asia",
+    "country": "Hong Kong",
+    "lat": 22.32,
+    "lng": 114.17,
+    "aliases": ["HK"]
+  },
+  {
+    "id": "Taipei",
+    "label": "Taipei",
+    "location_query": "Taipei",
+    "region": "asia",
+    "country": "Taiwan",
+    "lat": 25.03,
+    "lng": 121.57,
+    "aliases": []
+  },
+  {
+    "id": "Mumbai",
+    "label": "Mumbai",
+    "location_query": "Mumbai, India",
+    "region": "india",
+    "country": "India",
+    "lat": 19.08,
+    "lng": 72.88,
+    "aliases": ["Bombay"]
+  },
+  {
+    "id": "Delhi",
+    "label": "Delhi",
+    "location_query": "New Delhi, India",
+    "region": "india",
+    "country": "India",
+    "lat": 28.61,
+    "lng": 77.21,
+    "aliases": ["New Delhi"]
+  },
+  {
+    "id": "Bengaluru",
+    "label": "Bengaluru",
+    "location_query": "Bengaluru, India",
+    "region": "india",
+    "country": "India",
+    "lat": 12.97,
+    "lng": 77.59,
+    "aliases": ["Bangalore"]
+  },
+  {
+    "id": "Goa",
+    "label": "Goa",
+    "location_query": "Goa, India",
+    "region": "india",
+    "country": "India",
+    "lat": 15.3,
+    "lng": 74.12,
+    "aliases": []
+  },
+  {
+    "id": "Sydney",
+    "label": "Sydney",
+    "location_query": "Sydney, Australia",
+    "region": "oceania",
+    "country": "Australia",
+    "lat": -33.87,
+    "lng": 151.21,
+    "aliases": []
+  },
+  {
+    "id": "Melbourne",
+    "label": "Melbourne",
+    "location_query": "Melbourne, Australia",
+    "region": "oceania",
+    "country": "Australia",
+    "lat": -37.81,
+    "lng": 144.96,
+    "aliases": []
+  },
+  {
+    "id": "Auckland",
+    "label": "Auckland",
+    "location_query": "Auckland, New Zealand",
+    "region": "oceania",
+    "country": "New Zealand",
+    "lat": -36.85,
+    "lng": 174.76,
+    "aliases": []
+  }
+]

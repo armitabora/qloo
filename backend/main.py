@@ -8,12 +8,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from agent.agent import AgentUnavailableError, refine_itinerary
-from config import CITY_REGISTRY, get_settings
+from config import CITY_REGISTRY, REGION_LABELS, city_ids, get_settings
 from models import (
+    CitiesResponse,
+    CityOption,
     HealthResponse,
     ItineraryRequest,
     ItineraryResponse,
     RefineRequest,
+    RegionMeta,
 )
 from pipeline import NoAnchorsResolvedError, generate_itinerary
 
@@ -47,8 +50,30 @@ async def health() -> HealthResponse:
         status="ok",
         qloo_configured=s.has_qloo_key,
         gemini_configured=s.has_gemini_key,
-        cities=list(CITY_REGISTRY.keys()),
+        cities=city_ids(),
     )
+
+
+@app.get("/api/cities", response_model=CitiesResponse)
+async def list_cities() -> CitiesResponse:
+    cities = [
+        CityOption(
+            id=cfg.name,
+            label=cfg.name,
+            location_query=cfg.location_query,
+            region=cfg.region,
+            country=cfg.country,
+            lat=cfg.lat,
+            lng=cfg.lng,
+            aliases=list(cfg.aliases),
+        )
+        for cfg in sorted(CITY_REGISTRY.values(), key=lambda c: (c.region, c.name))
+    ]
+    regions = [
+        RegionMeta(id=rid, label=label)
+        for rid, label in REGION_LABELS.items()
+    ]
+    return CitiesResponse(cities=cities, regions=regions)
 
 
 @app.post("/api/generate-itinerary", response_model=ItineraryResponse)

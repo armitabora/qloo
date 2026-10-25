@@ -72,17 +72,26 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ```bash
 cd backend
-python scripts/qloo_probe.py --city Tokyo
+python scripts/qloo_probe.py --cities Tokyo Paris Chicago Mumbai Sydney
 ```
 
 ---
+
+## Destinations
+
+About 30 cities across the United States, Europe, Asia, India, and Oceania. The illustrated map picker loads them from `GET /api/cities`.
+
+To add a city, append a row to [`backend/data/cities.json`](backend/data/cities.json) (`id`, `label`, `location_query`, `region`, `country`, `lat`, `lng`, `aliases`) and restart the backend. No frontend deploy needed.
+
+Curated offline fallbacks exist only for **Tokyo** and **New York**. Other cities need a live Qloo key; without it they return an honest degraded response instead of wrong-city venues.
 
 ## API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `GET`  | `/api/cities` | Destination registry (regions + lat/lng for the map picker) |
 | `POST` | `/api/generate-itinerary` | Generate a new itinerary |
-| `GET`  | `/api/itinerary` | Retrieve the last generated itinerary |
+| `POST` | `/api/itinerary` | Alias for generate |
 | `POST` | `/api/refine` | Refine with thumbs-up/down feedback (Gemini agent) |
 | `GET`  | `/api/health` | Health check |
 
@@ -95,14 +104,17 @@ See [`backend/README.md`](backend/README.md) for full request/response schemas.
 ```
 ├── backend/
 │   ├── main.py              # FastAPI app
-│   ├── config.py            # Settings (env vars)
+│   ├── config.py            # Settings + city registry loader
+│   ├── data/cities.json     # ~30 destinations (single source of truth)
 │   ├── qloo/                # Qloo client, resolver, pipeline
 │   ├── narrative/           # Gemini + template narrative engine
 │   ├── agent/               # Gemini refine agent
 │   ├── scripts/             # qloo_probe.py smoke-test
-│   └── tests/               # pytest suite (30+ tests)
+│   └── tests/               # pytest suite
 ├── frontend/
-│   └── src/App.jsx          # React UI
+│   └── src/
+│       ├── App.jsx
+│       └── components/CityMapPicker.jsx
 └── scope.md                 # Hackathon scope document
 ```
 
