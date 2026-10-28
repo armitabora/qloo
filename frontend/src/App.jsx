@@ -265,7 +265,7 @@ function AppShell() {
           >
             Your cultural anchors
           </h2>
-          <p className="mt-3 max-w-xl text-[var(--color-muted)]">
+          <p className="mt-3 max-w-xl text-[var(--color-accent)]">
             Tell Qloo what you love. We cross music, film, and vibe into a day that feels like you
             in {formData.city || 'your city'}.
           </p>
