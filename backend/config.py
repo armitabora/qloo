@@ -117,9 +117,9 @@ class Settings:
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"
     allowed_origins: tuple[str, ...] = ("http://localhost:5173", "http://127.0.0.1:5173")
-    qloo_timeout_seconds: float = 8.0
-    qloo_max_retries: int = 2
-    qloo_cache_ttl_seconds: float = 300.0
+    qloo_timeout_seconds: float = 6.0
+    qloo_max_retries: int = 1
+    qloo_cache_ttl_seconds: float = 900.0
     agent_max_steps: int = 4
 
     @property
@@ -146,9 +146,9 @@ def get_settings() -> Settings:
         gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip(),
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip() or "gemini-3.8-flash",
         allowed_origins=_parse_origins(os.getenv("ALLOWED_ORIGINS")),
-        qloo_timeout_seconds=float(os.getenv("QLOO_TIMEOUT_SECONDS", "12")),
-        qloo_max_retries=int(os.getenv("QLOO_MAX_RETRIES", "2")),
-        qloo_cache_ttl_seconds=float(os.getenv("QLOO_CACHE_TTL_SECONDS", "300")),
+        qloo_timeout_seconds=float(os.getenv("QLOO_TIMEOUT_SECONDS", "6")),
+        qloo_max_retries=int(os.getenv("QLOO_MAX_RETRIES", "1")),
+        qloo_cache_ttl_seconds=float(os.getenv("QLOO_CACHE_TTL_SECONDS", "900")),
         agent_max_steps=int(os.getenv("AGENT_MAX_STEPS", "4")),
     )
 
