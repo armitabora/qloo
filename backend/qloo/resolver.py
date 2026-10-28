@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import unicodedata
@@ -194,14 +195,16 @@ class AnchorResolver:
         film: Optional[str] = None,
         vibe: Optional[str] = None,
     ) -> list[AnchorResolution]:
-        results: list[AnchorResolution] = []
+        tasks: list[Any] = []
         if music and music.strip():
-            results.append(await self.resolve_music(music.strip()))
+            tasks.append(self.resolve_music(music.strip()))
         if film and film.strip():
-            results.append(await self.resolve_film(film.strip()))
+            tasks.append(self.resolve_film(film.strip()))
         if vibe and vibe.strip():
-            results.append(await self.resolve_vibe(vibe.strip()))
-        return results
+            tasks.append(self.resolve_vibe(vibe.strip()))
+        if not tasks:
+            return []
+        return list(await asyncio.gather(*tasks))
 
     async def resolve_music(self, text: str) -> AnchorResolution:
         if looks_like_gibberish(text):
@@ -211,16 +214,18 @@ class AnchorResolver:
     async def resolve_film(self, text: str) -> AnchorResolution:
         if looks_like_gibberish(text):
             return AnchorResolution(input=text, kind="film", resolved=False)
-        # Prefer brand for studio names, then movie / person.
+        # Prefer brand for studio names, then movie / person. Search types in parallel.
         ordered_types = ["urn:entity:brand", "urn:entity:movie", "urn:entity:person"]
-        hits: list[dict[str, Any]] = []
-        for t in ordered_types:
+
+        async def _search_type(t: str) -> list[dict[str, Any]]:
             try:
-                batch = await self.client.search(text, types=t, take=5)
+                return await self.client.search(text, types=t, take=5)
             except QlooError as exc:
                 logger.warning("film search failed for %r type=%s: %s", text, t, exc)
-                batch = []
-            hits.extend(batch)
+                return []
+
+        batches = await asyncio.gather(*[_search_type(t) for t in ordered_types])
+        hits: list[dict[str, Any]] = [hit for batch in batches for hit in batch]
         best = self._pick_best(hits, preferred_types=ordered_types, query=text)
         if best:
             return AnchorResolution(

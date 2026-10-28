@@ -50,6 +50,11 @@ class _CacheEntry:
         self.expires_at = time.monotonic() + ttl
 
 
+# Shared across request-scoped clients so search/insights hits survive
+# generate-itinerary round trips within the TTL window.
+_PROCESS_CACHE: dict[str, _CacheEntry] = {}
+
+
 class QlooClient:
     """Thin async wrapper around the hackathon Qloo API."""
 
@@ -61,7 +66,6 @@ class QlooClient:
         self.settings = settings or get_settings()
         self._client = client
         self._owns_client = client is None
-        self._cache: dict[str, _CacheEntry] = {}
         self.call_count = 0
 
     @property
@@ -76,9 +80,10 @@ class QlooClient:
 
     async def _ensure_client(self) -> httpx.AsyncClient:
         if self._client is None:
+            read = self.settings.qloo_timeout_seconds
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                timeout=httpx.Timeout(self.settings.qloo_timeout_seconds),
+                timeout=httpx.Timeout(connect=3.0, read=read, write=read, pool=3.0),
             )
             self._owns_client = True
         return self._client
@@ -103,11 +108,11 @@ class QlooClient:
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     def _cache_get(self, key: str) -> Any | None:
-        entry = self._cache.get(key)
+        entry = _PROCESS_CACHE.get(key)
         if entry is None:
             return None
         if entry.expires_at < time.monotonic():
-            self._cache.pop(key, None)
+            _PROCESS_CACHE.pop(key, None)
             return None
         return entry.value
 
@@ -115,10 +120,15 @@ class QlooClient:
         ttl = self.settings.qloo_cache_ttl_seconds
         if ttl <= 0:
             return
-        self._cache[key] = _CacheEntry(value, ttl)
+        _PROCESS_CACHE[key] = _CacheEntry(value, ttl)
 
     def clear_cache(self) -> None:
-        self._cache.clear()
+        _PROCESS_CACHE.clear()
+
+    @classmethod
+    def clear_process_cache(cls) -> None:
+        """Test helper: drop shared cache between cases."""
+        _PROCESS_CACHE.clear()
 
     async def get(
         self,

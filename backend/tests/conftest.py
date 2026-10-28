@@ -43,5 +43,7 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("QLOO_API_KEY", "test-qloo-key")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     clear_settings_cache()
+    QlooClient.clear_process_cache()
     yield
+    QlooClient.clear_process_cache()
     clear_settings_cache()
