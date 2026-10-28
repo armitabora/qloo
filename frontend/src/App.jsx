@@ -7,6 +7,13 @@ import CityLogoGrid from './components/CityLogoGrid';
 import CyclingPromptField from './components/CyclingPromptField';
 import CrossfadeAtmosphere from './components/CrossfadeAtmosphere';
 import ItineraryCarousel from './components/ItineraryCarousel';
+import SiteFooter from './components/SiteFooter';
+import {
+  AboutPage,
+  NotFoundPage,
+  PrivacyPage,
+  TermsPage,
+} from './components/StaticPage';
 import WoodgrainAtmosphere from './components/WoodgrainAtmosphere';
 import VibeOutputDissolve from './components/VibeOutputDissolve';
 import { generateItinerary } from './api';
@@ -156,10 +163,8 @@ function AppShell() {
 
     try {
       const data = await generateItinerary(formData);
-      setTimeout(() => {
-        setItinerary(data);
-        setIsLoading(false);
-      }, 4500);
+      setItinerary(data);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching itinerary:', error);
       const detail = error.body?.detail;
@@ -175,10 +180,8 @@ function AppShell() {
         lenis?.scrollTo('#vibe');
         return;
       }
-      setTimeout(() => {
-        setApiError(true);
-        setIsLoading(false);
-      }, 1500);
+      setApiError(true);
+      setIsLoading(false);
     }
   };
 
@@ -349,11 +352,24 @@ function AppShell() {
           )}
         </VibeOutputDissolve>
       </form>
+      <SiteFooter />
     </div>
   );
 }
 
+function normalizePath(pathname) {
+  const trimmed = pathname.replace(/\/+$/, '');
+  return trimmed === '' ? '/' : trimmed;
+}
+
 export default function App() {
+  const path = normalizePath(window.location.pathname);
+
+  if (path === '/about') return <AboutPage />;
+  if (path === '/terms') return <TermsPage />;
+  if (path === '/privacy') return <PrivacyPage />;
+  if (path !== '/') return <NotFoundPage />;
+
   return (
     <ReactLenis
       root
